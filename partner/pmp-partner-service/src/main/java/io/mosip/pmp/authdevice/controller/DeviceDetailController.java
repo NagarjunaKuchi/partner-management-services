@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.mosip.kernel.core.http.ResponseFilter;
-import io.mosip.pmp.authdevice.constants.Purpose;
 import io.mosip.pmp.authdevice.dto.DeviceDetailDto;
 import io.mosip.pmp.authdevice.dto.DeviceDetailSearchResponseDto;
 import io.mosip.pmp.authdevice.dto.DeviceDetailUpdateDto;
@@ -28,6 +27,7 @@ import io.mosip.pmp.authdevice.entity.RegistrationDeviceSubType;
 import io.mosip.pmp.authdevice.service.DeviceDetailService;
 import io.mosip.pmp.authdevice.util.AuditUtil;
 import io.mosip.pmp.authdevice.util.AuthDeviceConstant;
+import io.mosip.pmp.common.constant.Purpose;
 import io.mosip.pmp.common.dto.DeviceFilterValueDto;
 import io.mosip.pmp.common.dto.PageResponseDto;
 import io.mosip.pmp.partner.core.RequestWrapper;

@@ -1211,6 +1211,7 @@ public class PartnerServiceImpl implements PartnerService {
 			partnerPolicyList.add(searchResponse);
 		});
 		return partnerPolicyList;
+	}
 
 	private void notify(String certData,String partnerDomain) {
 		Type type = new Type();
