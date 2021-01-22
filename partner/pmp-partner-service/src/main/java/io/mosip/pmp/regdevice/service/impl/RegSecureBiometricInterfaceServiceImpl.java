@@ -21,6 +21,7 @@ import io.mosip.pmp.authdevice.constants.SecureBiometricInterfaceConstant;
 import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
 import io.mosip.pmp.authdevice.dto.IdDto;
 import io.mosip.pmp.authdevice.dto.SbiSearchResponseDto;
+import io.mosip.pmp.authdevice.dto.SBISearchDto;
 import io.mosip.pmp.authdevice.dto.SecureBiometricInterfaceCreateDto;
 import io.mosip.pmp.authdevice.dto.SecureBiometricInterfaceStatusUpdateDto;
 import io.mosip.pmp.authdevice.dto.SecureBiometricInterfaceUpdateDto;
@@ -28,6 +29,7 @@ import io.mosip.pmp.authdevice.exception.RequestException;
 import io.mosip.pmp.authdevice.util.AuditUtil;
 import io.mosip.pmp.authdevice.util.AuthDeviceConstant;
 import io.mosip.pmp.common.dto.PageResponseDto;
+import io.mosip.pmp.common.dto.SearchFilter;
 import io.mosip.pmp.common.helper.SearchHelper;
 import io.mosip.pmp.common.util.MapperUtils;
 import io.mosip.pmp.common.util.PageUtils;
@@ -44,7 +46,7 @@ import io.mosip.pmp.regdevice.service.RegSecureBiometricInterfaceService;
 public class RegSecureBiometricInterfaceServiceImpl implements RegSecureBiometricInterfaceService {
 	
 	private static final String Pending_Approval = "Pending_Approval";
-	
+
 	@Autowired
 	RegDeviceDetailRepository deviceDetailRepository;
 	
@@ -161,8 +163,7 @@ public class RegSecureBiometricInterfaceServiceImpl implements RegSecureBiometri
 					SecureBiometricInterfaceConstant.DEVICE_DETAIL_INVALID.getErrorMessage());
 		}else {
 			entity.setDeviceDetailId(deviceDetail.getId());
-		}
-		
+		}		
 		entity.setId(sbiupdateDto.getId());
 		byte[] swNinaryHashArr = sbiupdateDto.getSwBinaryHash().getBytes();
 		entity.setSwBinaryHash(swNinaryHashArr);
@@ -176,10 +177,8 @@ public class RegSecureBiometricInterfaceServiceImpl implements RegSecureBiometri
 		return dto;
 	}
 	
-	private RegSecureBiometricInterface getUpdateMapping(RegSecureBiometricInterface entity,SecureBiometricInterfaceUpdateDto dto) {
-		
-		entity.setActive(dto.getIsActive());
-		
+	private RegSecureBiometricInterface getUpdateMapping(RegSecureBiometricInterface entity,SecureBiometricInterfaceUpdateDto dto) {		
+		entity.setActive(dto.getIsActive());		
 		Authentication authN = SecurityContextHolder.getContext().getAuthentication();
 		if (!EmptyCheckUtils.isNullEmpty(authN)) {
 			entity.setUpdBy(authN.getName());
@@ -250,7 +249,6 @@ public class RegSecureBiometricInterfaceServiceImpl implements RegSecureBiometri
 			sbiRepository.save(entity);
 			return "Secure biometric details rejected successfully.";
 		}
-
 		auditUtil.auditRequest(
 				String.format(
 						AuthDeviceConstant.STATUS_UPDATE_FAILURE, RegDeviceDetail.class.getCanonicalName()),
@@ -278,5 +276,4 @@ public class RegSecureBiometricInterfaceServiceImpl implements RegSecureBiometri
 		}
 		return pageDto;
 	}
-
 }

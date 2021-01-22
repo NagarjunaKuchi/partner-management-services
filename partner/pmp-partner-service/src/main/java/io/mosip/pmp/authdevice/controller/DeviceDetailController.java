@@ -19,6 +19,7 @@ import io.mosip.pmp.authdevice.dto.DeviceDetailSearchResponseDto;
 import io.mosip.pmp.authdevice.dto.DeviceDetailUpdateDto;
 import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
 import io.mosip.pmp.authdevice.dto.FilterResponseCodeDto;
+import io.mosip.pmp.authdevice.dto.DeviceDetailSearchDto;
 import io.mosip.pmp.authdevice.dto.IdDto;
 import io.mosip.pmp.authdevice.dto.RegistrationSubTypeDto;
 import io.mosip.pmp.authdevice.dto.UpdateDeviceDetailStatusDto;
@@ -174,7 +175,7 @@ public class DeviceDetailController {
 	@PreAuthorize("hasAnyRole('DEVICE_PROVIDER','FTM_PROVIDER','PARTNER_ADMIN')")
 	public ResponseWrapper<PageResponseDto<DeviceDetailSearchResponseDto>> searchDeviceDetails(
 			@RequestBody @Valid RequestWrapper<DeviceSearchDto> request) {
-		ResponseWrapper<PageResponseDto<DeviceDetailSearchResponseDto>> responseWrapper = new ResponseWrapper<>();
+		ResponseWrapper<PageResponseDto<DeviceDetailSearchResponseDto>> responseWrapper = new ResponseWrapper<>();	
 		if(request.getRequest().getPurpose().equals(Purpose.REGISTRATION)) {
 			responseWrapper.setResponse(regDeviceDetaillService.searchDeviceDetails(RegDeviceDetail.class, request.getRequest()));
 			return responseWrapper;
@@ -239,5 +240,4 @@ public class DeviceDetailController {
 		responseWrapper.setResponse(deviceDetaillService.deviceSubTypeFilterValues(request.getRequest()));
 		return responseWrapper;
 	}
-
 }

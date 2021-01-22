@@ -19,10 +19,12 @@ import io.mosip.kernel.core.util.EmptyCheckUtils;
 import io.mosip.pmp.authdevice.constants.DeviceDetailExceptionsConstant;
 import io.mosip.pmp.authdevice.dto.ColumnCodeValue;
 import io.mosip.pmp.authdevice.dto.DeviceDetailDto;
+
 import io.mosip.pmp.authdevice.dto.DeviceDetailSearchResponseDto;
 import io.mosip.pmp.authdevice.dto.DeviceDetailUpdateDto;
 import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
 import io.mosip.pmp.authdevice.dto.FilterResponseCodeDto;
+import io.mosip.pmp.authdevice.dto.DeviceDetailSearchDto;
 import io.mosip.pmp.authdevice.dto.IdDto;
 import io.mosip.pmp.authdevice.dto.RegistrationSubTypeDto;
 import io.mosip.pmp.authdevice.dto.UpdateDeviceDetailStatusDto;
@@ -41,6 +43,7 @@ import io.mosip.pmp.common.validator.FilterColumnValidator;
 import io.mosip.pmp.partner.entity.Partner;
 import io.mosip.pmp.partner.repository.PartnerServiceRepository;
 import io.mosip.pmp.partner.util.PartnerUtil;
+import io.mosip.pmp.common.dto.SearchFilter;
 import io.mosip.pmp.regdevice.entity.RegDeviceDetail;
 import io.mosip.pmp.regdevice.entity.RegRegistrationDeviceSubType;
 import io.mosip.pmp.regdevice.entity.RegRegistrationDeviceType;
@@ -53,6 +56,7 @@ import io.mosip.pmp.regdevice.service.RegDeviceDetailService;
 public class RegDeviceDetailServiceImpl implements RegDeviceDetailService {
 
 	private static final String Pending_Approval = "Pending_Approval";
+	private static final String ALL = "all";
 
 	@Autowired
 	FilterColumnValidator filterColumnValidator;
@@ -135,7 +139,7 @@ public class RegDeviceDetailServiceImpl implements RegDeviceDetailService {
 	}
 
 	private RegDeviceDetail getCreateMapping(RegDeviceDetail deviceDetail, DeviceDetailDto deviceDetailDto) {
-		deviceDetail.setId(deviceDetailDto.getId() == null ? PartnerUtil.generateId(): deviceDetailDto.getId());
+		deviceDetail.setId(deviceDetailDto.getId() == null ? PartnerUtil.generateId(): deviceDetailDto.getId());		
 		deviceDetail.setIsActive(false);
 		deviceDetail.setApprovalStatus(Pending_Approval);
 		Authentication authN = SecurityContextHolder.getContext().getAuthentication();
@@ -205,8 +209,7 @@ public class RegDeviceDetailServiceImpl implements RegDeviceDetailService {
 	}
 
 	private RegDeviceDetail getUpdateMapping(RegDeviceDetail deviceDetail, DeviceDetailUpdateDto deviceDetailDto) {
-		deviceDetail.setId(deviceDetailDto.getId());
-
+		deviceDetail.setId(deviceDetailDto.getId());		
 		Authentication authN = SecurityContextHolder.getContext().getAuthentication();
 		if (!EmptyCheckUtils.isNullEmpty(authN)) {
 			deviceDetail.setUpdBy(authN.getName());
