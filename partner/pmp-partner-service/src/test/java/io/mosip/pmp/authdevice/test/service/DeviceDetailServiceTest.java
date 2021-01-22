@@ -119,7 +119,6 @@ public class DeviceDetailServiceTest {
 		deviceDetailUpdateDto.setDeviceSubTypeCode("123");
 		deviceDetailUpdateDto.setDeviceTypeCode("123");
 		deviceDetailUpdateDto.setId("121");
-		deviceDetailUpdateDto.setIsActive(true);
 		deviceDetailUpdateDto.setIsItForRegistrationDevice(false);
 		deviceDetailUpdateDto.setMake("make");
 		deviceDetailUpdateDto.setModel("model");

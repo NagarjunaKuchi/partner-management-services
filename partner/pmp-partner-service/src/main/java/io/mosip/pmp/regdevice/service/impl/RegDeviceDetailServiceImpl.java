@@ -19,9 +19,12 @@ import io.mosip.kernel.core.util.EmptyCheckUtils;
 import io.mosip.pmp.authdevice.constants.DeviceDetailExceptionsConstant;
 import io.mosip.pmp.authdevice.dto.ColumnCodeValue;
 import io.mosip.pmp.authdevice.dto.DeviceDetailDto;
+
+import io.mosip.pmp.authdevice.dto.DeviceDetailSearchResponseDto;
 import io.mosip.pmp.authdevice.dto.DeviceDetailUpdateDto;
 import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
 import io.mosip.pmp.authdevice.dto.FilterResponseCodeDto;
+import io.mosip.pmp.authdevice.dto.DeviceDetailSearchDto;
 import io.mosip.pmp.authdevice.dto.IdDto;
 import io.mosip.pmp.authdevice.dto.RegistrationSubTypeDto;
 import io.mosip.pmp.authdevice.dto.UpdateDeviceDetailStatusDto;
@@ -37,7 +40,10 @@ import io.mosip.pmp.common.helper.SearchHelper;
 import io.mosip.pmp.common.util.MapperUtils;
 import io.mosip.pmp.common.util.PageUtils;
 import io.mosip.pmp.common.validator.FilterColumnValidator;
+import io.mosip.pmp.partner.entity.Partner;
 import io.mosip.pmp.partner.repository.PartnerServiceRepository;
+import io.mosip.pmp.partner.util.PartnerUtil;
+import io.mosip.pmp.common.dto.SearchFilter;
 import io.mosip.pmp.regdevice.entity.RegDeviceDetail;
 import io.mosip.pmp.regdevice.entity.RegRegistrationDeviceSubType;
 import io.mosip.pmp.regdevice.entity.RegRegistrationDeviceType;
@@ -50,6 +56,7 @@ import io.mosip.pmp.regdevice.service.RegDeviceDetailService;
 public class RegDeviceDetailServiceImpl implements RegDeviceDetailService {
 
 	private static final String Pending_Approval = "Pending_Approval";
+	private static final String ALL = "all";
 
 	@Autowired
 	FilterColumnValidator filterColumnValidator;
@@ -98,8 +105,9 @@ public class RegDeviceDetailServiceImpl implements RegDeviceDetailService {
 			entity.setDeviceSubTypeCode(registrationDeviceSubType.getCode());
 			entity.setDeviceTypeCode(registrationDeviceSubType.getDeviceTypeCode());
 		}
-		if ((partnerRepository.findByIdAndIsDeletedFalseorIsDeletedIsNullAndIsActiveTrue(
-				deviceDetailDto.getDeviceProviderId())) == null) {
+		Partner partner =  partnerRepository.findByIdAndIsDeletedFalseorIsDeletedIsNullAndIsActiveTrue(
+				deviceDetailDto.getDeviceProviderId());
+		if (partner == null) {
 			auditUtil.auditRequest(
 					String.format(AuthDeviceConstant.FAILURE_CREATE, RegDeviceDetail.class.getCanonicalName()),
 					AuthDeviceConstant.AUDIT_SYSTEM,
@@ -110,7 +118,7 @@ public class RegDeviceDetailServiceImpl implements RegDeviceDetailService {
 			throw new RequestException(DeviceDetailExceptionsConstant.DEVICE_PROVIDER_NOT_FOUND.getErrorCode(),
 					DeviceDetailExceptionsConstant.DEVICE_PROVIDER_NOT_FOUND.getErrorMessage());
 		}
-
+		deviceDetailDto.setPartnerOrganizationName(partner.getName());
 		if (deviceDetailRepository.findByDeviceDetail(deviceDetailDto.getMake(), deviceDetailDto.getModel(),
 				deviceDetailDto.getDeviceProviderId(), deviceDetailDto.getDeviceSubTypeCode(),
 				deviceDetailDto.getDeviceTypeCode()) != null) {
@@ -131,7 +139,7 @@ public class RegDeviceDetailServiceImpl implements RegDeviceDetailService {
 	}
 
 	private RegDeviceDetail getCreateMapping(RegDeviceDetail deviceDetail, DeviceDetailDto deviceDetailDto) {
-		deviceDetail.setId(deviceDetailDto.getId());
+		deviceDetail.setId(deviceDetailDto.getId() == null ? PartnerUtil.generateId(): deviceDetailDto.getId());		
 		deviceDetail.setIsActive(false);
 		deviceDetail.setApprovalStatus(Pending_Approval);
 		Authentication authN = SecurityContextHolder.getContext().getAuthentication();
@@ -201,9 +209,7 @@ public class RegDeviceDetailServiceImpl implements RegDeviceDetailService {
 	}
 
 	private RegDeviceDetail getUpdateMapping(RegDeviceDetail deviceDetail, DeviceDetailUpdateDto deviceDetailDto) {
-		deviceDetail.setId(deviceDetailDto.getId());
-		deviceDetail.setIsActive(deviceDetailDto.getIsActive());
-
+		deviceDetail.setId(deviceDetailDto.getId());		
 		Authentication authN = SecurityContextHolder.getContext().getAuthentication();
 		if (!EmptyCheckUtils.isNullEmpty(authN)) {
 			deviceDetail.setUpdBy(authN.getName());
@@ -267,12 +273,12 @@ public class RegDeviceDetailServiceImpl implements RegDeviceDetailService {
 	private EntityManager entityManager;
 
 	@Override
-	public <E> PageResponseDto<DeviceDetailDto> searchDeviceDetails(Class<E> entity, DeviceSearchDto dto) {
-		List<DeviceDetailDto> deviceDetails = new ArrayList<>();
-		PageResponseDto<DeviceDetailDto> pageDto = new PageResponseDto<>();		
+	public <E> PageResponseDto<DeviceDetailSearchResponseDto> searchDeviceDetails(Class<E> entity, DeviceSearchDto dto) {
+		List<DeviceDetailSearchResponseDto> deviceDetails = new ArrayList<>();
+		PageResponseDto<DeviceDetailSearchResponseDto> pageDto = new PageResponseDto<>();		
 		Page<E> page = searchHelper.search(entityManager, entity, dto);
 		if (page.getContent() != null && !page.getContent().isEmpty()) {
-			deviceDetails = MapperUtils.mapAll(page.getContent(), DeviceDetailDto.class);
+			deviceDetails = MapperUtils.mapAll(page.getContent(), DeviceDetailSearchResponseDto.class);
 			pageDto = pageUtils.sortPage(deviceDetails, dto.getSort(), dto.getPagination(), page.getTotalElements());
 		}
 		return pageDto;

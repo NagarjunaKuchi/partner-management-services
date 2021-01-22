@@ -3,6 +3,9 @@ package io.mosip.pmp.common.dto;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
+import lombok.Data;
+
+@Data
 public class SearchAuthPolicy  {
 
 
@@ -14,7 +17,7 @@ public class SearchAuthPolicy  {
 
 	private LocalDateTime delDtimes;
 
-	private String descr;
+	private String desc;
 
 	private Boolean isActive;
 
@@ -27,6 +30,7 @@ public class SearchAuthPolicy  {
 	private String updBy;
 
 	private LocalDateTime updDtimes;
+	
 	private LocalDateTime validFromDate;
 
 	private LocalDateTime validToDate;
@@ -37,7 +41,9 @@ public class SearchAuthPolicy  {
 
 	private String schema;
 
-	private String policyGroup;
+	private String policyGroupId;
+	
+	private String policyGroupName;
 
 	public String getCrBy() {
 		return crBy;
@@ -51,8 +57,8 @@ public class SearchAuthPolicy  {
 		return delDtimes;
 	}
 
-	public String getDescr() {
-		return descr;
+	public String getDesc() {
+		return desc;
 	}
 
 	public String getId() {
@@ -75,8 +81,8 @@ public class SearchAuthPolicy  {
 		return policyFileId;
 	}
 
-	public String getPolicyGroup() {
-		return policyGroup;
+	public String getPolicyGroupId() {
+		return policyGroupId;
 	}
 
 	public String getPolicyType() {
@@ -119,8 +125,8 @@ public class SearchAuthPolicy  {
 		this.delDtimes = delDtimes;
 	}
 
-	public void setDescr(String descr) {
-		this.descr = descr;
+	public void setDesc(String desc) {
+		this.desc = desc;
 	}
 
 	public void setId(String id) {
@@ -143,8 +149,8 @@ public class SearchAuthPolicy  {
 		this.policyFileId = policyFileId;
 	}
 
-	public void setPolicyGroup(String policyGroup) {
-		this.policyGroup = policyGroup;
+	public void setPolicyGroupId(String policyGroupId) {
+		this.policyGroupId = policyGroupId;
 	}
 
 	public void setPolicyType(String policyType) {

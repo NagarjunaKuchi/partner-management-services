@@ -437,13 +437,14 @@ public class MapperUtils {
 			searchAuthPolicy.setCrBy(authPolicy.getCrBy());
 			searchAuthPolicy.setCrDtimes(authPolicy.getCrDtimes());
 			searchAuthPolicy.setDelDtimes(authPolicy.getDelDtimes());
-			searchAuthPolicy.setDescr(authPolicy.getDescr());
+			searchAuthPolicy.setDesc(authPolicy.getDescr());
 			searchAuthPolicy.setId(authPolicy.getId());
 			searchAuthPolicy.setIsActive(authPolicy.getIsActive());
 			searchAuthPolicy.setIsDeleted(authPolicy.getIsDeleted());
 			searchAuthPolicy.setName(authPolicy.getName());
 			searchAuthPolicy.setPolicyFileId(authPolicy.getPolicyFileId());
-			searchAuthPolicy.setPolicyGroup(authPolicy.getPolicyGroup().getId());
+			searchAuthPolicy.setPolicyGroupId(authPolicy.getPolicyGroup().getId());
+			searchAuthPolicy.setPolicyGroupName(authPolicy.getPolicyGroup().getName());
 			searchAuthPolicy.setPolicyType(authPolicy.getPolicy_type());
 			searchAuthPolicy.setSchema(authPolicy.getPolicySchema());
 			searchAuthPolicy.setUpdBy(authPolicy.getUpdBy());

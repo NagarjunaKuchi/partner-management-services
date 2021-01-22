@@ -129,7 +129,6 @@ public class DeviceDetailControllerTest {
     	deviceDetailDto.setDeviceSubTypeCode("123");
     	deviceDetailDto.setDeviceTypeCode("123");
     	deviceDetailDto.setId("121");
-    	deviceDetailDto.setIsActive(true);
     	deviceDetailDto.setIsItForRegistrationDevice(isItForRegistrationDevice);
     	deviceDetailDto.setMake("make");
     	deviceDetailDto.setModel("model");

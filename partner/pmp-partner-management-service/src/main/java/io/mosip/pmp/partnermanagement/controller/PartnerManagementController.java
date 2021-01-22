@@ -88,7 +88,6 @@ public class PartnerManagementController {
 		partnersPolicyMappingResponse = partnerManagementService
 				.partnerApiKeyPolicyMappings(partnersPolicyMappingRequest, partnerId, partnerApiKey);
 		response.setResponse(partnersPolicyMappingResponse);
-		auditUtil.setAuditRequestDto(PartnerManageEnum.API_KEY_MAPPING_SUCCESS);
 		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 	
@@ -188,7 +187,6 @@ public class PartnerManagementController {
 		partnersPolicyMappingResponse = partnerManagementService
 				.approveRejectPartnerAPIKeyRequestsBasedOnAPIKeyRequestId(activateDeactivatePartnerRequest,apiKeyReqId);
 		response.setResponse(partnersPolicyMappingResponse);
-		auditUtil.setAuditRequestDto(PartnerManageEnum.APPROVE_REJECT_PARTNER_API_SUCCESS);
 		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 	
@@ -207,7 +205,6 @@ public class PartnerManagementController {
 		response.setId(msg);
 		response.setVersion(version);
 		response.setResponse(retrievePartnerDetailsResponse);
-		auditUtil.setAuditRequestDto(PartnerManageEnum.GET_PARTNER_POLICY_GROUP_SUCCESS);
 		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 	
@@ -227,7 +224,6 @@ public class PartnerManagementController {
 		response.setId(msg);
 		response.setVersion(version);
 		response.setResponse(retrievePartnersDetails);
-		auditUtil.setAuditRequestDto(PartnerManageEnum.GET_PARTNER_FOR_ID_SUCCESS);
 		return new ResponseEntity<>(response , HttpStatus.OK);
 	}
 	
@@ -253,7 +249,6 @@ public class PartnerManagementController {
 		response.setId(msg);
 		response.setVersion(version);
 		response.setResponse(partnerAPIKeyToPolicyMappingsResponse);
-		auditUtil.setAuditRequestDto(PartnerManageEnum.GET_PARTNER_SUCCESS);
 		return new ResponseEntity<>(response , HttpStatus.OK);
 	}
 	
@@ -273,7 +268,6 @@ public class PartnerManagementController {
 		response.setId(msg);
 		response.setVersion(version);
 		response.setResponse(partnerAPIKeyRequestsResponse);
-		auditUtil.setAuditRequestDto(PartnerManageEnum.GET_PARTNER_SUCCESS);
 		return new ResponseEntity<>(response , HttpStatus.OK);
 	}
 	

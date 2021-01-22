@@ -619,9 +619,8 @@ public class RegisteredDeviceServiceImpl implements RegisteredDeviceService {
 		Page<E> page =searchHelper.search(entityManager,entity, dto);
 		if (page.getContent() != null && !page.getContent().isEmpty()) {
 			registredDevices=MapperUtils.mapAll(page.getContent(), RegisteredDevice.class);
-			pageDto = pageUtils.sortPage(registredDevices, dto.getSort(), dto.getPagination(),page.getTotalElements());
+			pageDto = pageUtils.sortPage(registredDevices, dto.getSort(), dto.getPagination(),page.getTotalElements());		
 		}
 		return pageDto;
 	}
-
 }

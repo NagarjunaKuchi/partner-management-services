@@ -96,9 +96,14 @@ public class PolicyServiceTest {
 	@Mock
 	private WebSubPublisher webSubPublisher;
 	
+
 	@Mock
 	FilterColumnValidator filterColumnValidator;
 	
+
+	@MockBean
+	private AuditUtil audit;
+
 	
 	@Mock
 	private AuditUtil audit;

@@ -19,9 +19,11 @@ import io.mosip.kernel.core.util.EmptyCheckUtils;
 import io.mosip.pmp.authdevice.constants.DeviceDetailExceptionsConstant;
 import io.mosip.pmp.authdevice.dto.ColumnCodeValue;
 import io.mosip.pmp.authdevice.dto.DeviceDetailDto;
+import io.mosip.pmp.authdevice.dto.DeviceDetailSearchResponseDto;
 import io.mosip.pmp.authdevice.dto.DeviceDetailUpdateDto;
 import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
 import io.mosip.pmp.authdevice.dto.FilterResponseCodeDto;
+import io.mosip.pmp.authdevice.dto.DeviceDetailSearchDto;
 import io.mosip.pmp.authdevice.dto.IdDto;
 import io.mosip.pmp.authdevice.dto.RegistrationSubTypeDto;
 import io.mosip.pmp.authdevice.dto.UpdateDeviceDetailStatusDto;
@@ -43,7 +45,11 @@ import io.mosip.pmp.common.helper.SearchHelper;
 import io.mosip.pmp.common.util.MapperUtils;
 import io.mosip.pmp.common.util.PageUtils;
 import io.mosip.pmp.common.validator.FilterColumnValidator;
+import io.mosip.pmp.partner.entity.Partner;
 import io.mosip.pmp.partner.repository.PartnerServiceRepository;
+import io.mosip.pmp.partner.util.PartnerUtil;
+import io.mosip.pmp.common.dto.SearchFilter;
+
 
 @Component
 @Transactional
@@ -98,8 +104,9 @@ public class DeviceDetailServiceImpl implements DeviceDetailService {
 			entity.setDeviceSubTypeCode(registrationDeviceSubType.getCode());
 			entity.setDeviceTypeCode(registrationDeviceSubType.getDeviceTypeCode());
 		}
-		if ((partnerRepository.findByIdAndIsDeletedFalseorIsDeletedIsNullAndIsActiveTrue(
-				deviceDetailDto.getDeviceProviderId())) == null) {
+		Partner partner = partnerRepository.findByIdAndIsDeletedFalseorIsDeletedIsNullAndIsActiveTrue(
+				deviceDetailDto.getDeviceProviderId()); 
+		if (partner == null) {
 			auditUtil.auditRequest(
 					String.format(AuthDeviceConstant.FAILURE_CREATE, DeviceDetail.class.getCanonicalName()),
 					AuthDeviceConstant.AUDIT_SYSTEM,
@@ -110,7 +117,7 @@ public class DeviceDetailServiceImpl implements DeviceDetailService {
 			throw new RequestException(DeviceDetailExceptionsConstant.DEVICE_PROVIDER_NOT_FOUND.getErrorCode(),
 					DeviceDetailExceptionsConstant.DEVICE_PROVIDER_NOT_FOUND.getErrorMessage());
 		}
-
+		deviceDetailDto.setPartnerOrganizationName(partner.getName());
 		if (deviceDetailRepository.findByDeviceDetail(deviceDetailDto.getMake(), deviceDetailDto.getModel(),
 				deviceDetailDto.getDeviceProviderId(), deviceDetailDto.getDeviceSubTypeCode(),
 				deviceDetailDto.getDeviceTypeCode()) != null) {
@@ -130,8 +137,8 @@ public class DeviceDetailServiceImpl implements DeviceDetailService {
 		return dto;
 	}
 
-	private DeviceDetail getCreateMapping(DeviceDetail deviceDetail, DeviceDetailDto deviceDetailDto) {
-		deviceDetail.setId(deviceDetailDto.getId());
+	private DeviceDetail getCreateMapping(DeviceDetail deviceDetail, DeviceDetailDto deviceDetailDto) {		
+		deviceDetail.setId(deviceDetailDto.getId() == null ? PartnerUtil.generateId(): deviceDetailDto.getId());
 		deviceDetail.setIsActive(false);
 		deviceDetail.setApprovalStatus(PENDING_APPROVAL);
 		Authentication authN = SecurityContextHolder.getContext().getAuthentication();
@@ -202,7 +209,6 @@ public class DeviceDetailServiceImpl implements DeviceDetailService {
 
 	private DeviceDetail getUpdateMapping(DeviceDetail deviceDetail, DeviceDetailUpdateDto deviceDetailDto) {
 		deviceDetail.setId(deviceDetailDto.getId());
-		deviceDetail.setIsActive(deviceDetailDto.getIsActive());
 
 		Authentication authN = SecurityContextHolder.getContext().getAuthentication();
 		if (!EmptyCheckUtils.isNullEmpty(authN)) {
@@ -266,12 +272,12 @@ public class DeviceDetailServiceImpl implements DeviceDetailService {
 	private EntityManager entityManager;
 
 	@Override
-	public <E> PageResponseDto<DeviceDetailDto> searchDeviceDetails(Class<E> entity, DeviceSearchDto dto) {
-		List<DeviceDetailDto> deviceDetails = new ArrayList<>();
-		PageResponseDto<DeviceDetailDto> pageDto = new PageResponseDto<>();
+	public <E> PageResponseDto<DeviceDetailSearchResponseDto> searchDeviceDetails(Class<E> entity, DeviceSearchDto dto) {
+		List<DeviceDetailSearchResponseDto> deviceDetails = new ArrayList<>();
+		PageResponseDto<DeviceDetailSearchResponseDto> pageDto = new PageResponseDto<>();
 		Page<E> page = searchHelper.search(entityManager, entity, dto);
 		if (page.getContent() != null && !page.getContent().isEmpty()) {
-			deviceDetails = MapperUtils.mapAll(page.getContent(), DeviceDetailDto.class);
+			deviceDetails = MapperUtils.mapAll(page.getContent(), DeviceDetailSearchResponseDto.class);
 			pageDto = pageUtils.sortPage(deviceDetails, dto.getSort(), dto.getPagination(),page.getTotalElements());
 		}
 		return pageDto;
@@ -361,5 +367,4 @@ public class DeviceDetailServiceImpl implements DeviceDetailService {
 		}
 		return filterResponseDto;
 	}
-
 }

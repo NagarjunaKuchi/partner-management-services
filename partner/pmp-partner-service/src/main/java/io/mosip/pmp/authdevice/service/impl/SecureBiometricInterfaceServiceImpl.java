@@ -20,6 +20,8 @@ import io.mosip.kernel.core.util.EmptyCheckUtils;
 import io.mosip.pmp.authdevice.constants.SecureBiometricInterfaceConstant;
 import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
 import io.mosip.pmp.authdevice.dto.IdDto;
+import io.mosip.pmp.authdevice.dto.SbiSearchResponseDto;
+import io.mosip.pmp.authdevice.dto.SBISearchDto;
 import io.mosip.pmp.authdevice.dto.SecureBiometricInterfaceCreateDto;
 import io.mosip.pmp.authdevice.dto.SecureBiometricInterfaceStatusUpdateDto;
 import io.mosip.pmp.authdevice.dto.SecureBiometricInterfaceUpdateDto;
@@ -34,6 +36,7 @@ import io.mosip.pmp.authdevice.service.SecureBiometricInterfaceService;
 import io.mosip.pmp.authdevice.util.AuditUtil;
 import io.mosip.pmp.authdevice.util.AuthDeviceConstant;
 import io.mosip.pmp.common.dto.PageResponseDto;
+import io.mosip.pmp.common.dto.SearchFilter;
 import io.mosip.pmp.common.helper.SearchHelper;
 import io.mosip.pmp.common.util.MapperUtils;
 import io.mosip.pmp.common.util.PageUtils;
@@ -274,13 +277,13 @@ public class SecureBiometricInterfaceServiceImpl implements SecureBiometricInter
 	private EntityManager entityManager;
 
 	@Override
-	public <E> PageResponseDto<SecureBiometricInterfaceCreateDto> searchSecureBiometricInterface(Class<E> entity,
+	public <E> PageResponseDto<SbiSearchResponseDto> searchSecureBiometricInterface(Class<E> entity,
 			DeviceSearchDto dto) {
-		List<SecureBiometricInterfaceCreateDto> sbis = new ArrayList<>();
-		PageResponseDto<SecureBiometricInterfaceCreateDto> pageDto = new PageResponseDto<>();		
+		List<SbiSearchResponseDto> sbis = new ArrayList<>();
+		PageResponseDto<SbiSearchResponseDto> pageDto = new PageResponseDto<>();		
 		Page<E> page = searchHelper.search(entityManager, entity, dto);
 		if (page.getContent() != null && !page.getContent().isEmpty()) {
-			sbis = MapperUtils.mapAll(page.getContent(), SecureBiometricInterfaceCreateDto.class);
+			sbis = MapperUtils.mapAll(page.getContent(), SbiSearchResponseDto.class);
 			pageDto = pageUtils.sortPage(sbis, dto.getSort(), dto.getPagination(),page.getTotalElements());
 		}
 		return pageDto;

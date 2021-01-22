@@ -28,6 +28,7 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.mosip.pmp.common.dto.FilterDto;
 import io.mosip.pmp.common.dto.FilterValueDto;
@@ -37,6 +38,10 @@ import io.mosip.pmp.common.dto.SearchFilter;
 import io.mosip.pmp.common.dto.SearchSort;
 import io.mosip.pmp.common.helper.SearchHelper;
 import io.mosip.pmp.common.util.PageUtils;
+
+
+import io.mosip.pmp.common.helper.WebSubPublisher;
+
 import io.mosip.pmp.partner.PartnerserviceApplication;
 import io.mosip.pmp.partner.dto.APIkeyRequests;
 import io.mosip.pmp.partner.dto.DownloadPartnerAPIkeyResponse;
@@ -119,6 +124,8 @@ public class PartnerServiceImplTest {
 	BiometricExtractorProviderRepository extractorProviderRepository;	
 	@Mock
 	PartnerPolicyCredentialTypeRepository partnerCredentialTypePolicyRepo;
+	@Mock
+	private WebSubPublisher webSubPublisher;
 	
 	FilterValueDto deviceFilterValueDto = new FilterValueDto();
 	FilterDto filterDto = new FilterDto();
@@ -140,6 +147,7 @@ public class PartnerServiceImplTest {
 		ReflectionTestUtils.setField(pserviceImpl, "partnerTypeRepository", partnerTypeRepository);
 		ReflectionTestUtils.setField(pserviceImpl, "extractorProviderRepository", extractorProviderRepository);
 		ReflectionTestUtils.setField(pserviceImpl, "partnerCredentialTypePolicyRepo", partnerCredentialTypePolicyRepo);
+
 		ReflectionTestUtils.setField(pserviceImpl, "partnerSearchHelper", partnerSearchHelper);
 		ReflectionTestUtils.setField(pserviceImpl, "pageUtils", pageUtils);
 		ReflectionTestUtils.setField(pserviceImpl, "restUtil", restUtil);
@@ -196,6 +204,9 @@ public class PartnerServiceImplTest {
 		PartnerCertDownloadResponeDto partnerCertDownloadResponeDto = pserviceImpl.getPartnerCertificate(partnerCertDownloadRequestDto);
 		assertNotNull(partnerCertDownloadResponeDto);
 		assertEquals(partnerCertDownloadResponeDto.getCertificateData(), "12345");
+
+		Mockito.doNothing().when(webSubPublisher).notify(Mockito.any(),Mockito.any(),Mockito.any());
+
 	}
 	
 	@Test 
