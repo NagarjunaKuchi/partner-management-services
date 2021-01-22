@@ -4,6 +4,9 @@ package io.mosip.pmp.regdevice.test.service;
 import static org.junit.Assert.assertTrue;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -11,16 +14,35 @@ import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.mosip.kernel.core.http.RequestWrapper;
 import io.mosip.pmp.authdevice.dto.DeviceDetailDto;
+import io.mosip.pmp.authdevice.dto.DeviceDetailSearchDto;
 import io.mosip.pmp.authdevice.dto.DeviceDetailUpdateDto;
+import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
 import io.mosip.pmp.authdevice.dto.UpdateDeviceDetailStatusDto;
+import io.mosip.pmp.authdevice.entity.DeviceDetail;
 import io.mosip.pmp.authdevice.exception.RequestException;
 import io.mosip.pmp.authdevice.util.AuditUtil;
+import io.mosip.pmp.common.constant.Purpose;
+import io.mosip.pmp.common.dto.DeviceFilterValueDto;
+import io.mosip.pmp.common.dto.FilterDto;
+import io.mosip.pmp.common.dto.Pagination;
+import io.mosip.pmp.common.dto.SearchFilter;
+import io.mosip.pmp.common.dto.SearchSort;
+import io.mosip.pmp.common.helper.FilterHelper;
+import io.mosip.pmp.common.helper.SearchHelper;
+import io.mosip.pmp.common.util.PageUtils;
+import io.mosip.pmp.common.validator.FilterColumnValidator;
 import io.mosip.pmp.partner.PartnerserviceApplication;
 import io.mosip.pmp.partner.entity.Partner;
 import io.mosip.pmp.partner.repository.PartnerServiceRepository;
@@ -37,6 +59,22 @@ import io.mosip.pmp.regdevice.service.impl.RegDeviceDetailServiceImpl;
 @EnableWebMvc
 public class RegDeviceDetailServiceTest {
 	
+	@Mock
+	SearchHelper searchHelper;
+	
+	@Mock
+	PageUtils pageUtils;
+	
+	@Mock
+	FilterHelper filterHelper;
+	
+	@Autowired
+	private ObjectMapper objectMapper;
+	
+	@Mock
+	FilterColumnValidator filterColumnValidator;
+
+	
 	@InjectMocks
 	RegDeviceDetailService deviceDetaillService=new RegDeviceDetailServiceImpl();
 	
@@ -52,13 +90,63 @@ public class RegDeviceDetailServiceTest {
 	@Mock
 	PartnerServiceRepository partnerRepository;
 	
+	private RequestWrapper<DeviceDetailSearchDto> deviceRequestDto;
 	RegDeviceDetail deviceDetail=new RegDeviceDetail();
 	Partner partner=new Partner();
 	RegRegistrationDeviceSubType registrationDeviceSubType=new RegRegistrationDeviceSubType();
 	DeviceDetailDto deviceDetailDto=new DeviceDetailDto();
 	DeviceDetailUpdateDto deviceDetailUpdateDto=new DeviceDetailUpdateDto();
+	DeviceFilterValueDto deviceFilterDto = new DeviceFilterValueDto();
+	DeviceFilterValueDto deviceFilterDto1 = new DeviceFilterValueDto();
+	FilterDto filterDto = new FilterDto();
+	SearchFilter searchDto = new SearchFilter();
+	DeviceDetailSearchDto deviceSearchDetailDto = new DeviceDetailSearchDto();
+	DeviceSearchDto deviceSearchDto = new DeviceSearchDto();
+	Pagination pagination = new Pagination();
+	SearchSort searchSort = new SearchSort();
+	SearchFilter searchFilter = new SearchFilter();
 	@Before
 	public void setup() {
+		ReflectionTestUtils.setField(deviceDetaillService, "filterColumnValidator", filterColumnValidator);
+		ReflectionTestUtils.setField(deviceDetaillService, "searchHelper", searchHelper);
+		ReflectionTestUtils.setField(deviceDetaillService, "pageUtils", pageUtils);
+		ReflectionTestUtils.setField(deviceDetaillService, "filterHelper", filterHelper);
+		//Search
+    	searchSort.setSortField("model");
+    	searchSort.setSortType("asc");
+    	searchFilter.setColumnName("model");
+    	searchFilter.setFromValue("");
+    	searchFilter.setToValue("");
+    	searchFilter.setType("STARTSWITH");
+    	searchFilter.setValue("b");
+    	List<SearchSort> searchDtos1 = new ArrayList<SearchSort>();
+    	searchDtos1.add(searchSort);
+    	List<SearchFilter> searchfilterDtos = new ArrayList<SearchFilter>();
+    	searchfilterDtos.add(searchFilter);
+    	deviceSearchDetailDto.setDeviceProviderId("all");
+    	deviceSearchDetailDto.setFilters(searchfilterDtos);
+    	deviceSearchDetailDto.setSort(searchDtos1);
+    	deviceSearchDto.setPurpose(Purpose.REGISTRATION);
+    	pagination.setPageFetch(10);
+    	pagination.setPageStart(0);
+    	//Filter
+		filterDto.setColumnName("model");
+    	filterDto.setText("");
+    	filterDto.setType("all");
+    	searchDto.setColumnName("model");
+    	searchDto.setFromValue("");
+    	searchDto.setToValue("");
+    	searchDto.setType("all");
+    	searchDto.setValue("b");
+    	List<FilterDto> filterDtos = new ArrayList<FilterDto>();
+    	filterDtos.add(filterDto);
+    	List<SearchFilter> searchDtos = new ArrayList<SearchFilter>();
+    	searchDtos.add(searchDto);
+    	deviceFilterDto.setFilters(filterDtos);
+    	deviceFilterDto.setOptionalFilters(searchDtos);
+    	//deviceFilterDto.setDeviceProviderId("all");
+    	deviceFilterDto.setPurpose(Purpose.REGISTRATION);
+		
 		partner.setId("1234");
 		registrationDeviceSubType.setCode("123");
 		registrationDeviceSubType.setDeviceTypeCode("123");
@@ -100,6 +188,57 @@ public class RegDeviceDetailServiceTest {
 		Mockito.doReturn(deviceDetail).when(deviceDetailRepository).findByDeviceDetail(Mockito.anyString(),Mockito.anyString(),Mockito.anyString(),Mockito.anyString(),Mockito.anyString());
 		Mockito.doReturn(registrationDeviceSubType).when(registrationDeviceSubTypeRepository).findByCodeAndTypeCodeAndIsDeletedFalseorIsDeletedIsNullAndIsActiveTrue(Mockito.anyString(),Mockito.anyString());
 		Mockito.doReturn(partner).when(partnerRepository).findByIdAndIsDeletedFalseorIsDeletedIsNullAndIsActiveTrue(Mockito.anyString());
+	}
+	
+	@Test
+	public void searchRegDeviceDetailtest() throws Exception{
+		objectMapper.writeValueAsString(deviceRequestDto);
+		DeviceDetail device = new DeviceDetail();
+		device.setId("1001");
+		Mockito.doReturn(new PageImpl<>(Arrays.asList(device))).when(searchHelper).search(Mockito.any(),Mockito.any(),Mockito.any());
+		deviceDetaillService.searchDeviceDetails(RegDeviceDetail.class, deviceSearchDetailDto);
+	}
+	
+	@Test
+	public void searchDeviceTypeTest() throws Exception{
+		objectMapper.writeValueAsString(deviceRequestDto);
+		DeviceDetail device = new DeviceDetail();
+		device.setId("1001");
+		Mockito.doReturn(new PageImpl<>(Arrays.asList(device))).when(searchHelper).search(Mockito.any(),Mockito.any(),Mockito.any());
+		deviceDetaillService.searchDeviceType(RegDeviceDetail.class, deviceSearchDetailDto);
+	}
+	
+	@Test
+	public void filterDeviceDetailTest() throws Exception {
+		deviceDetaillService.regDeviceFilterValues(deviceFilterDto);
+	}
+	
+	@Test
+	public void filterDeviceDetailTest1() throws Exception {
+		Mockito.doReturn(true).when(filterColumnValidator).validate(Mockito.any(), Mockito.any(), Mockito.any());
+		deviceDetaillService.regDeviceFilterValues(deviceFilterDto);
+	}
+	
+	@Test
+	public void regDeviceTypeFilterValuesTest() throws Exception {
+		deviceDetaillService.regDeviceTypeFilterValues(deviceFilterDto);
+	}
+	
+	@Test
+	public void regDeviceTypeFilterValuesTest1() throws Exception {
+		Mockito.doReturn(true).when(filterColumnValidator).validate(Mockito.any(), Mockito.any(), Mockito.any());
+		deviceDetaillService.regDeviceTypeFilterValues(deviceFilterDto);
+	}
+
+	@Test
+	public void regDeviceSubTypeFilterValuesTest() throws Exception {
+		deviceDetaillService.regDeviceSubTypeFilterValues(deviceFilterDto);
+	}
+	
+	@Test
+	public void regDeviceSubTypeFilterValuesTest1() throws Exception {
+		Mockito.doReturn(true).when(filterColumnValidator).validate(Mockito.any(), Mockito.any(), Mockito.any());
+		deviceDetaillService.regDeviceSubTypeFilterValues(deviceFilterDto);
 	}
 	
 	@Test

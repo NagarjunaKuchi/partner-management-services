@@ -1,8 +1,6 @@
-package io.mosip.pmp.authdevice.dto;
-
+package io.mosip.pmp.common.dto;
 
 import io.mosip.pmp.common.constant.Purpose;
-import io.mosip.pmp.common.dto.SearchDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -12,7 +10,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper=true)
-public class DeviceSearchDto extends SearchDto {
-
+public class SBIFilterValueDto extends FilterValueDto {
+	
+private String deviceDetailId;
+	
 	private Purpose purpose;
+
 }
