@@ -8,12 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -29,13 +29,19 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.mosip.pmp.authdevice.controller.SecureBiometricInterfaceController;
+import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
 import io.mosip.pmp.authdevice.dto.IdDto;
+import io.mosip.pmp.authdevice.dto.SbiSearchResponseDto;
 import io.mosip.pmp.authdevice.dto.SecureBiometricInterfaceCreateDto;
 import io.mosip.pmp.authdevice.dto.SecureBiometricInterfaceStatusUpdateDto;
 import io.mosip.pmp.authdevice.dto.SecureBiometricInterfaceUpdateDto;
 import io.mosip.pmp.authdevice.service.SecureBiometricInterfaceService;
 import io.mosip.pmp.authdevice.util.AuditUtil;
+import io.mosip.pmp.common.constant.Purpose;
+import io.mosip.pmp.common.dto.PageResponseDto;
+import io.mosip.pmp.common.dto.Pagination;
+import io.mosip.pmp.common.dto.SearchFilter;
+import io.mosip.pmp.common.dto.SearchSort;
 import io.mosip.pmp.partner.core.RequestWrapper;
 import io.mosip.pmp.partner.core.ResponseWrapper;
 import io.mosip.pmp.partner.test.PartnerserviceApplicationTest;
@@ -45,7 +51,7 @@ import io.mosip.pmp.regdevice.service.RegSecureBiometricInterfaceService;
 @SpringBootTest(classes = PartnerserviceApplicationTest.class)
 @AutoConfigureMockMvc
 @EnableWebMvc
-@Ignore
+
 public class SecureBiometricInterfaceControllerTest {
 	
 	@Autowired
@@ -54,17 +60,14 @@ public class SecureBiometricInterfaceControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
     
-    @InjectMocks
-    SecureBiometricInterfaceController secureBiometricInterfaceController;
-    
     @MockBean
 	AuditUtil auditUtil;
 	
     @MockBean	
-    SecureBiometricInterfaceService secureBiometricInterfaceService;
+   private  SecureBiometricInterfaceService secureBiometricInterfaceService;
 	
     @MockBean	
-    RegSecureBiometricInterfaceService regSecureBiometricInterface;
+   private  RegSecureBiometricInterfaceService regSecureBiometricInterface;
     
     RequestWrapper<SecureBiometricInterfaceCreateDto> createRequest=null;
     RequestWrapper<SecureBiometricInterfaceUpdateDto> updateRequest=null;
@@ -73,16 +76,90 @@ public class SecureBiometricInterfaceControllerTest {
     public void setup() {
     	Mockito.doNothing().when(auditUtil).auditRequest(any(), any(), any());
     	Mockito.doNothing().when(auditUtil).auditRequest(any(), any(), any(),any());
-    	
+    	PageResponseDto<SbiSearchResponseDto> searchresponse = new PageResponseDto<SbiSearchResponseDto>();
     	IdDto response = new IdDto();
     	ResponseWrapper<IdDto> responseWrapper = new ResponseWrapper<>();
+    	ResponseWrapper<PageResponseDto<SbiSearchResponseDto>> searchResponseWrapper = new ResponseWrapper<>();
+    	searchResponseWrapper.setResponse(searchresponse);
     	responseWrapper.setResponse(response);
+    	Mockito.when(regSecureBiometricInterface.searchSecureBiometricInterface(Mockito.any(), Mockito.any())).thenReturn(searchresponse);
         Mockito.when(regSecureBiometricInterface.updateSecureBiometricInterface(Mockito.any())).thenReturn(response);
         Mockito.when(regSecureBiometricInterface.createSecureBiometricInterface(Mockito.any())).thenReturn(response);
+        Mockito.when(secureBiometricInterfaceService.searchSecureBiometricInterface(Mockito.any(), Mockito.any())).thenReturn(searchresponse);
         Mockito.when(secureBiometricInterfaceService.updateSecureBiometricInterface(Mockito.any())).thenReturn(response);
         Mockito.when(secureBiometricInterfaceService.createSecureBiometricInterface(Mockito.any())).thenReturn(response);
         createRequest = createRequest(false);
         updateRequest=updateRequest(false);
+    }
+    
+    private RequestWrapper<DeviceSearchDto> searchRequest() {
+    	RequestWrapper<DeviceSearchDto> request = new RequestWrapper<DeviceSearchDto>();
+        request.setRequest(searchSBIRequest());
+        request.setId("mosip.partnermanagement.sbi.update");
+        request.setVersion("1.0");
+        request.setRequesttime(ZonedDateTime.now(ZoneOffset.UTC).toLocalDateTime());
+        request.setMetadata("{}");
+        return request;
+	}
+    
+    private DeviceSearchDto searchSBIRequest () {
+    	DeviceSearchDto dto = new DeviceSearchDto();
+    	Pagination pagination = new Pagination();
+    	SearchSort searchSort = new SearchSort();
+    	SearchFilter searchFilter = new SearchFilter();
+    	searchSort.setSortField("model");
+    	searchSort.setSortType("asc");
+    	searchFilter.setColumnName("model");
+    	searchFilter.setFromValue("");
+    	searchFilter.setToValue("");
+    	searchFilter.setType("STARTSWITH");
+    	searchFilter.setValue("b");
+    	List<SearchSort> searchDtos1 = new ArrayList<SearchSort>();
+    	searchDtos1.add(searchSort);
+    	List<SearchFilter> searchfilterDtos = new ArrayList<SearchFilter>();
+    	searchfilterDtos.add(searchFilter);
+    	pagination.setPageFetch(10);
+    	pagination.setPageStart(0);
+    	dto.setFilters(searchfilterDtos);
+    	dto.setPagination(pagination);
+    	dto.setPurpose(Purpose.AUTH);
+    	dto.setSort(searchDtos1);
+    	return dto;
+    }
+    
+    private RequestWrapper<DeviceSearchDto> searchRegRequest() {
+    	RequestWrapper<DeviceSearchDto> request = new RequestWrapper<DeviceSearchDto>();
+        request.setRequest(searchRegSBIRequest());
+        request.setId("mosip.partnermanagement.sbi.update");
+        request.setVersion("1.0");
+        request.setRequesttime(ZonedDateTime.now(ZoneOffset.UTC).toLocalDateTime());
+        request.setMetadata("{}");
+        return request;
+	}
+    
+    private DeviceSearchDto searchRegSBIRequest () {
+    	DeviceSearchDto dto = new DeviceSearchDto();
+    	Pagination pagination = new Pagination();
+    	SearchSort searchSort = new SearchSort();
+    	SearchFilter searchFilter = new SearchFilter();
+    	searchSort.setSortField("model");
+    	searchSort.setSortType("asc");
+    	searchFilter.setColumnName("model");
+    	searchFilter.setFromValue("");
+    	searchFilter.setToValue("");
+    	searchFilter.setType("STARTSWITH");
+    	searchFilter.setValue("b");
+    	List<SearchSort> searchDtos1 = new ArrayList<SearchSort>();
+    	searchDtos1.add(searchSort);
+    	List<SearchFilter> searchfilterDtos = new ArrayList<SearchFilter>();
+    	searchfilterDtos.add(searchFilter);
+    	pagination.setPageFetch(10);
+    	pagination.setPageStart(0);
+    	dto.setFilters(searchfilterDtos);
+    	dto.setPagination(pagination);
+    	dto.setPurpose(Purpose.REGISTRATION);
+    	dto.setSort(searchDtos1);
+    	return dto;
     }
     
     private RequestWrapper<SecureBiometricInterfaceUpdateDto> updateRequest(boolean isItForRegistrationDevice) {
@@ -152,7 +229,7 @@ public class SecureBiometricInterfaceControllerTest {
     }
     
     @Test
-    @WithMockUser(roles = {"PARTNER"})
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
     public void createsbiTest() throws Exception {      
 
         mockMvc.perform(post("/securebiometricinterface").contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -160,14 +237,14 @@ public class SecureBiometricInterfaceControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = {"PARTNER"})
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
     public void updatesbiTest() throws Exception {
     	mockMvc.perform(put("/securebiometricinterface").contentType(MediaType.APPLICATION_JSON_VALUE)
                 .content(objectMapper.writeValueAsString(updateRequest))).andExpect(status().isOk());
     }
     
     @Test
-    @WithMockUser(roles = {"PARTNERMANAGER"})
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
     public void approveDeviceDetailsTest() throws JsonProcessingException, Exception {
     	RequestWrapper<SecureBiometricInterfaceStatusUpdateDto> createrequest=approvalRequest(false);
     	mockMvc.perform(MockMvcRequestBuilders.patch("/securebiometricinterface").contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -175,7 +252,15 @@ public class SecureBiometricInterfaceControllerTest {
     }
     
     @Test
-    @WithMockUser(roles = {"PARTNERMANAGER"})
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
+    public void searchSecureBiometricTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceSearchDto> createrequest=searchRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/securebiometricinterface/search").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(createrequest))).andExpect(status().isOk());    	
+    }
+    
+    @Test
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
     public void approveDeviceDetailsTest_regDevice() throws JsonProcessingException, Exception {
     	RequestWrapper<SecureBiometricInterfaceStatusUpdateDto> createrequest=approvalRequest(true);
     	mockMvc.perform(MockMvcRequestBuilders.patch("/securebiometricinterface").contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -183,7 +268,7 @@ public class SecureBiometricInterfaceControllerTest {
     }
     
     @Test
-    @WithMockUser(roles = {"PARTNER"})
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
     public void createsbiTest_regDevice() throws Exception {
     	RequestWrapper<SecureBiometricInterfaceCreateDto> createRequest=createRequest(true);
         mockMvc.perform(post("/securebiometricinterface").contentType(MediaType.APPLICATION_JSON_VALUE)
@@ -191,10 +276,18 @@ public class SecureBiometricInterfaceControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = {"PARTNER"})
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
     public void updatesbiTest_regDevice() throws Exception {
     	RequestWrapper<SecureBiometricInterfaceUpdateDto> updateRequest=updateRequest(true);
     	mockMvc.perform(put("/securebiometricinterface").contentType(MediaType.APPLICATION_JSON_VALUE)
                 .content(objectMapper.writeValueAsString(updateRequest))).andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
+    public void searchRegSecureBiometricTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceSearchDto> createrequest=searchRegRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/securebiometricinterface/search").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(createrequest))).andExpect(status().isOk());    	
     }
 }

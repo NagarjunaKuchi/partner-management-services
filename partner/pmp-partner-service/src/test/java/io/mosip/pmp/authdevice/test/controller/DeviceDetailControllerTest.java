@@ -7,12 +7,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -21,6 +22,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
@@ -29,24 +31,34 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.mosip.pmp.authdevice.controller.DeviceDetailController;
 import io.mosip.pmp.authdevice.dto.DeviceDetailDto;
+import io.mosip.pmp.authdevice.dto.DeviceDetailSearchResponseDto;
 import io.mosip.pmp.authdevice.dto.DeviceDetailUpdateDto;
+import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
+import io.mosip.pmp.authdevice.dto.FilterResponseCodeDto;
 import io.mosip.pmp.authdevice.dto.IdDto;
+import io.mosip.pmp.authdevice.dto.RegistrationSubTypeDto;
 import io.mosip.pmp.authdevice.dto.UpdateDeviceDetailStatusDto;
-import io.mosip.pmp.authdevice.service.DeviceDetailService;
+import io.mosip.pmp.authdevice.service.impl.DeviceDetailServiceImpl;
 import io.mosip.pmp.authdevice.util.AuditUtil;
+import io.mosip.pmp.common.constant.Purpose;
+import io.mosip.pmp.common.dto.DeviceFilterValueDto;
+import io.mosip.pmp.common.dto.FilterDto;
+import io.mosip.pmp.common.dto.PageResponseDto;
+import io.mosip.pmp.common.dto.Pagination;
+import io.mosip.pmp.common.dto.SearchFilter;
+import io.mosip.pmp.common.dto.SearchSort;
+import io.mosip.pmp.common.validator.FilterColumnValidator;
 import io.mosip.pmp.misp.exception.MISPServiceException;
 import io.mosip.pmp.partner.core.RequestWrapper;
 import io.mosip.pmp.partner.core.ResponseWrapper;
 import io.mosip.pmp.partner.test.PartnerserviceApplicationTest;
-import io.mosip.pmp.regdevice.service.RegDeviceDetailService;
+import io.mosip.pmp.regdevice.service.impl.RegDeviceDetailServiceImpl;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = PartnerserviceApplicationTest.class)
 @AutoConfigureMockMvc
 @EnableWebMvc
-
 public class DeviceDetailControllerTest {
 	
 	@Autowired
@@ -55,35 +67,57 @@ public class DeviceDetailControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
     
-    @InjectMocks
-    DeviceDetailController deviceDetailController;
-    
     @MockBean
 	AuditUtil auditUtil;
 	
+    @Mock
+	FilterColumnValidator filterColumnValidator;
+    
     @MockBean	
-	DeviceDetailService deviceDetaillService;
+    private DeviceDetailServiceImpl deviceDetaillService;
 	
     @MockBean	
-	RegDeviceDetailService regDeviceDetaillService;
+    private RegDeviceDetailServiceImpl regDeviceDetaillService;
     
-    RequestWrapper<DeviceDetailDto> createrequest=null;
-    RequestWrapper<DeviceDetailUpdateDto> updaterequest=null;
     
     @Before
     public void setup() {
+    	ReflectionTestUtils.setField(deviceDetaillService, "filterColumnValidator", filterColumnValidator);
+    	ReflectionTestUtils.setField(regDeviceDetaillService, "filterColumnValidator", filterColumnValidator);
     	Mockito.doNothing().when(auditUtil).auditRequest(any(), any(), any());
     	Mockito.doNothing().when(auditUtil).auditRequest(any(), any(), any(),any());
     	
     	IdDto response = new IdDto();
+    	String stringResponse = new String();
+    	PageResponseDto<DeviceDetailSearchResponseDto> searchResponse = new PageResponseDto<DeviceDetailSearchResponseDto>();
+    	PageResponseDto<RegistrationSubTypeDto> searchTypeResponse = new PageResponseDto<RegistrationSubTypeDto>();
+    	FilterResponseCodeDto filterResponse = new FilterResponseCodeDto();
     	ResponseWrapper<IdDto> responseWrapper = new ResponseWrapper<>();
+    	ResponseWrapper<String> responsewrapper = new ResponseWrapper<>();
+    	ResponseWrapper<PageResponseDto<DeviceDetailSearchResponseDto>> searchResponseWrapper = new ResponseWrapper<>();
+    	ResponseWrapper<PageResponseDto<RegistrationSubTypeDto>> searchTypeResponseWrapper = new ResponseWrapper<>();
+    	ResponseWrapper<FilterResponseCodeDto> filterResponseWrapper = new  ResponseWrapper<>();
+    	filterResponseWrapper.setResponse(filterResponse);
+    	searchTypeResponseWrapper.setResponse(searchTypeResponse);
+    	searchResponseWrapper.setResponse(searchResponse);
     	responseWrapper.setResponse(response);
+    	responsewrapper.setResponse(stringResponse);
+    	Mockito.when(regDeviceDetaillService.regDeviceFilterValues(Mockito.any())).thenReturn(filterResponse);
+    	Mockito.when(regDeviceDetaillService.regDeviceTypeFilterValues(Mockito.any())).thenReturn(filterResponse);
+    	Mockito.when(regDeviceDetaillService.regDeviceSubTypeFilterValues(Mockito.any())).thenReturn(filterResponse);
+    	Mockito.when(regDeviceDetaillService.searchDeviceType(Mockito.any(), Mockito.any())).thenReturn(searchTypeResponse);
+    	Mockito.when(regDeviceDetaillService.searchDeviceDetails(Mockito.any(), Mockito.any())).thenReturn(searchResponse);
         Mockito.when(regDeviceDetaillService.updateDeviceDetails(Mockito.any())).thenReturn(response);
         Mockito.when(regDeviceDetaillService.createDeviceDetails(Mockito.any())).thenReturn(response);
+        Mockito.when(regDeviceDetaillService.updateDeviceDetailStatus(Mockito.any())).thenReturn(stringResponse);
         Mockito.when(deviceDetaillService.updateDeviceDetails(Mockito.any())).thenReturn(response);
         Mockito.when(deviceDetaillService.createDeviceDetails(Mockito.any())).thenReturn(response);
-         createrequest = createRequest(false);
-         updaterequest =updateRequest(false);
+        Mockito.when(deviceDetaillService.updateDeviceDetailStatus(Mockito.any())).thenReturn(stringResponse);
+        Mockito.when(deviceDetaillService.searchDeviceDetails(Mockito.any(), Mockito.any())).thenReturn(searchResponse);
+        Mockito.when(deviceDetaillService.searchDeviceType(Mockito.any(), Mockito.any())).thenReturn(searchTypeResponse);
+        Mockito.when(deviceDetaillService.deviceFilterValues(Mockito.any())).thenReturn(filterResponse);
+        Mockito.when(deviceDetaillService.deviceTypeFilterValues(Mockito.any())).thenReturn(filterResponse);
+        Mockito.when(deviceDetaillService.deviceSubTypeFilterValues(Mockito.any())).thenReturn(filterResponse);
     }
     
     private RequestWrapper<DeviceDetailDto> createRequest(boolean isItForRegistrationDevice) {
@@ -155,36 +189,217 @@ public class DeviceDetailControllerTest {
     	return dto;
     }
     
+    private RequestWrapper<DeviceSearchDto> RegSearchRequest() {
+        RequestWrapper<DeviceSearchDto> request = new RequestWrapper<DeviceSearchDto>();
+        request.setRequest(searchRegDetailRequest());
+        request.setId("mosip.partnermanagement.devicedetail.create");
+        request.setVersion("1.0");
+        request.setRequesttime(ZonedDateTime.now(ZoneOffset.UTC).toLocalDateTime());
+        request.setMetadata("{}");
+        return request;
+    }
+    
+    private DeviceSearchDto searchRegDetailRequest() {
+    	DeviceSearchDto dto = new DeviceSearchDto();
+    	SearchFilter searchFilter = new SearchFilter();
+    	SearchSort searchSort = new SearchSort();
+    	Pagination pagination = new Pagination();
+    	searchSort.setSortField("model");
+    	searchSort.setSortType("asc");
+    	searchFilter.setColumnName("model");
+    	searchFilter.setFromValue("");
+    	searchFilter.setToValue("");
+    	searchFilter.setType("STARTSWITH");
+    	searchFilter.setValue("b");
+    	List<SearchSort> searchDtos1 = new ArrayList<SearchSort>();
+    	searchDtos1.add(searchSort);
+    	List<SearchFilter> searchfilterDtos = new ArrayList<SearchFilter>();
+    	searchfilterDtos.add(searchFilter);
+    	List<SearchFilter> searchDtos = new ArrayList<SearchFilter>();
+    	searchDtos.add(searchFilter);
+    	pagination.setPageFetch(10);
+    	pagination.setPageStart(0);
+    	dto.setSort(searchDtos1);
+    	dto.setFilters(searchfilterDtos);
+    	dto.setPagination(pagination);
+    	dto.setPurpose(Purpose.REGISTRATION);
+		return dto;
+    
+    }
+    
+    private RequestWrapper<DeviceSearchDto> searchRequest() {
+        RequestWrapper<DeviceSearchDto> request = new RequestWrapper<DeviceSearchDto>();
+        request.setRequest(searchDetailRequest());
+        request.setId("mosip.partnermanagement.devicedetail.create");
+        request.setVersion("1.0");
+        request.setRequesttime(ZonedDateTime.now(ZoneOffset.UTC).toLocalDateTime());
+        request.setMetadata("{}");
+        return request;
+    }
+    
+    private DeviceSearchDto searchDetailRequest() {
+    	DeviceSearchDto dto = new DeviceSearchDto();
+    	SearchFilter searchFilter = new SearchFilter();
+    	SearchSort searchSort = new SearchSort();
+    	Pagination pagination = new Pagination();
+    	searchSort.setSortField("model");
+    	searchSort.setSortType("asc");
+    	searchFilter.setColumnName("model");
+    	searchFilter.setFromValue("");
+    	searchFilter.setToValue("");
+    	searchFilter.setType("STARTSWITH");
+    	searchFilter.setValue("b");
+    	List<SearchSort> searchDtos1 = new ArrayList<SearchSort>();
+    	searchDtos1.add(searchSort);
+    	List<SearchFilter> searchfilterDtos = new ArrayList<SearchFilter>();
+    	searchfilterDtos.add(searchFilter);
+    	List<SearchFilter> searchDtos = new ArrayList<SearchFilter>();
+    	searchDtos.add(searchFilter);
+    	pagination.setPageFetch(10);
+    	pagination.setPageStart(0);
+    	dto.setSort(searchDtos1);
+    	dto.setFilters(searchfilterDtos);
+    	dto.setPagination(pagination);
+    	dto.setPurpose(Purpose.AUTH);
+		return dto;
+    }
+    
+    private RequestWrapper<DeviceFilterValueDto> filterRegRequest() {
+        RequestWrapper<DeviceFilterValueDto> request = new RequestWrapper<DeviceFilterValueDto>();
+        request.setRequest(filterRegDetailRequest());
+        request.setId("mosip.partnermanagement.devicedetail.create");
+        request.setVersion("1.0");
+        request.setRequesttime(ZonedDateTime.now(ZoneOffset.UTC).toLocalDateTime());
+        request.setMetadata("{}");
+        return request;
+    }
+    
+    private DeviceFilterValueDto filterRegDetailRequest() {
+    	DeviceFilterValueDto dto = new DeviceFilterValueDto();
+    	SearchFilter searchFilter = new SearchFilter();
+    	FilterDto filterDto = new FilterDto();
+    	filterDto.setColumnName("model");
+    	filterDto.setText("");
+    	filterDto.setType("all");
+    	searchFilter.setColumnName("model");
+    	searchFilter.setFromValue("");
+    	searchFilter.setToValue("");
+    	searchFilter.setType("STARTSWITH");
+    	searchFilter.setValue("b");
+       	List<SearchFilter> searchfilterDtos = new ArrayList<SearchFilter>();
+    	searchfilterDtos.add(searchFilter);
+    	List<FilterDto> filterDtos = new ArrayList<FilterDto>();
+    	filterDtos.add(filterDto);
+    	dto.setFilters(filterDtos);
+    	dto.setOptionalFilters(searchfilterDtos);
+    	dto.setPurpose(Purpose.REGISTRATION);
+		return dto;
+    
+    }
+    
+    private RequestWrapper<DeviceFilterValueDto> filterRequest() {
+        RequestWrapper<DeviceFilterValueDto> request = new RequestWrapper<DeviceFilterValueDto>();
+        request.setRequest(filterDetailRequest());
+        request.setId("mosip.partnermanagement.devicedetail.create");
+        request.setVersion("1.0");
+        request.setRequesttime(ZonedDateTime.now(ZoneOffset.UTC).toLocalDateTime());
+        request.setMetadata("{}");
+        return request;
+    }
+    
+    private DeviceFilterValueDto filterDetailRequest() {
+    	DeviceFilterValueDto dto = new DeviceFilterValueDto();
+    	SearchFilter searchFilter = new SearchFilter();
+    	FilterDto filterDto = new FilterDto();
+    	filterDto.setColumnName("model");
+    	filterDto.setText("");
+    	filterDto.setType("all");
+    	searchFilter.setColumnName("model");
+    	searchFilter.setFromValue("");
+    	searchFilter.setToValue("");
+    	searchFilter.setType("STARTSWITH");
+    	searchFilter.setValue("b");
+       	List<SearchFilter> searchfilterDtos = new ArrayList<SearchFilter>();
+    	searchfilterDtos.add(searchFilter);
+    	List<FilterDto> filterDtos = new ArrayList<FilterDto>();
+    	filterDtos.add(filterDto);
+    	dto.setFilters(filterDtos);
+    	dto.setOptionalFilters(searchfilterDtos);
+    	dto.setPurpose(Purpose.AUTH);
+		return dto;
+    
+    }
+    
     @Test    
-    @WithMockUser(roles = {"PARTNER"})
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
     public void createDeviceDetailTest() throws Exception {
+    	RequestWrapper<DeviceDetailDto> request = createRequest (true);
         mockMvc.perform(post("/devicedetail").contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content(objectMapper.writeValueAsString(createrequest))).andExpect(status().isOk());
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+    }
+    
+    @Test    
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void createDeviceDetailTest_01() throws Exception {
+    	RequestWrapper<DeviceDetailDto> request = createRequest (false);
+        mockMvc.perform(post("/devicedetail").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
     }
 
     @Test
-    @WithMockUser(roles = {"PARTNER"})
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
     public void updateDeviceDetailsTest() throws Exception {
+    	RequestWrapper<DeviceDetailUpdateDto> request = updateRequest(true);
     	mockMvc.perform(put("/devicedetail").contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content(objectMapper.writeValueAsString(updaterequest))).andExpect(status().isOk());
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
     }
     
     @Test
-    @WithMockUser(roles = {"PARTNERMANAGER"})
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void updateDeviceDetailsTest_01() throws Exception {
+    	RequestWrapper<DeviceDetailUpdateDto> request = updateRequest(false);
+    	mockMvc.perform(put("/devicedetail").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
     public void approveDeviceDetailsTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<UpdateDeviceDetailStatusDto> createrequest=approvalRequest(true);
+    	mockMvc.perform(MockMvcRequestBuilders.patch("/devicedetail").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(createrequest))).andExpect(status().isOk());    	
+    }
+    @Test
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void approveDeviceDetailsTest_01() throws JsonProcessingException, Exception {
     	RequestWrapper<UpdateDeviceDetailStatusDto> createrequest=approvalRequest(false);
     	mockMvc.perform(MockMvcRequestBuilders.patch("/devicedetail").contentType(MediaType.APPLICATION_JSON_VALUE)
                 .content(objectMapper.writeValueAsString(createrequest))).andExpect(status().isOk());    	
     }
-
+    
     @Test
-	@WithMockUser(roles = {"MISP"})
-	public void getLicenseDetailsTest () throws MISPServiceException , Exception{
-//		mockMvc.perform(MockMvcRequestBuilders.get("/misp")).
-//		andExpect(MockMvcResultMatchers.status().isOk());
-		mockMvc.perform(MockMvcRequestBuilders.get("/misp")).
-		andExpect(MockMvcResultMatchers.status().isOk());
-	}
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void deviceDetailsSearchTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceSearchDto> request = searchRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/devicedetail/search").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void regDeviceDetailsSearchTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceSearchDto> request = RegSearchRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/devicedetail/search").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void deviceTypeSearchTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceSearchDto> request = searchRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/devicedetail/deviceType/search").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+       }   
 
     @Test    
     @WithMockUser(roles = {"PARTNER"})
@@ -195,19 +410,61 @@ public class DeviceDetailControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = {"PARTNER"})
-    public void updateDeviceDetailsTest_regdevice() throws Exception {
-    	RequestWrapper<DeviceDetailUpdateDto> updaterequest=updateRequest(true);
-    	mockMvc.perform(put("/devicedetail").contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content(objectMapper.writeValueAsString(updaterequest))).andExpect(status().isOk());
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void regDeviceTypeSearchTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceSearchDto> request = RegSearchRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/devicedetail/deviceType/search").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
     }
     
     @Test
-    @WithMockUser(roles = {"PARTNERMANAGER"})
-    public void approveDeviceDetailsTest_regDevice() throws JsonProcessingException, Exception {
-    	RequestWrapper<UpdateDeviceDetailStatusDto> createrequest=approvalRequest(true);
-    	mockMvc.perform(MockMvcRequestBuilders.patch("/devicedetail").contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content(objectMapper.writeValueAsString(createrequest))).andExpect(status().isOk());    	
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void filterRegDeviceTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceFilterValueDto> request = filterRegRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/devicedetail/filtervalues").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
     }
+    
+    @Test
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void filterDeviceTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceFilterValueDto> request = filterRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/devicedetail/filtervalues").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void filterRegDeviceTypeTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceFilterValueDto> request = filterRegRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/devicedetail/deviceType/filtervalues").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void filterDeviceTypeTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceFilterValueDto> request = filterRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/devicedetail/deviceType/filtervalues").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void filterRegDeviceSubTypeTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceFilterValueDto> request = filterRegRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/devicedetail/deviceSubType/filtervalues").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(roles = {"PARTNER_ADMIN"})
+    public void filterDeviceSubTypeTest() throws JsonProcessingException, Exception {
+    	RequestWrapper<DeviceFilterValueDto> request = filterRequest();
+    	mockMvc.perform(MockMvcRequestBuilders.post("/devicedetail/deviceSubType/filtervalues").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+    }
+    
+
     
 }
