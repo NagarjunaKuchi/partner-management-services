@@ -2,13 +2,17 @@ package io.mosip.pmp.partner.test;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Import;
+
+import io.mosip.pmp.common.helper.WebSubPublisher;
 
 
 /**
  * @author sanjeev.shrivastava
  *
  */
-@SpringBootApplication(scanBasePackages = {"io.mosip.pmp.keycloak.*","io.mosip.pmp.partner.*","io.mosip.pmp.authdevice.*","io.mosip.pmp.regdevice.*"})
+@Import(value = {WebSubPublisher.class})
+@SpringBootApplication(scanBasePackages = {"io.mosip.pmp.keycloak.*","io.mosip.pmp.partner.*","io.mosip.pmp.authdevice.*","io.mosip.pmp.regdevice.*","io.mosip.pmp.common.*"})
 public class PartnerserviceApplicationTest {
 	
 	/**

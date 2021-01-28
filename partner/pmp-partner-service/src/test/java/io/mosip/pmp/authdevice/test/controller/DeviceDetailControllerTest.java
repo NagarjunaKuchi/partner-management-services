@@ -23,6 +23,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -35,6 +36,7 @@ import io.mosip.pmp.authdevice.dto.IdDto;
 import io.mosip.pmp.authdevice.dto.UpdateDeviceDetailStatusDto;
 import io.mosip.pmp.authdevice.service.DeviceDetailService;
 import io.mosip.pmp.authdevice.util.AuditUtil;
+import io.mosip.pmp.misp.exception.MISPServiceException;
 import io.mosip.pmp.partner.core.RequestWrapper;
 import io.mosip.pmp.partner.core.ResponseWrapper;
 import io.mosip.pmp.partner.test.PartnerserviceApplicationTest;
@@ -44,7 +46,7 @@ import io.mosip.pmp.regdevice.service.RegDeviceDetailService;
 @SpringBootTest(classes = PartnerserviceApplicationTest.class)
 @AutoConfigureMockMvc
 @EnableWebMvc
-@Ignore
+
 public class DeviceDetailControllerTest {
 	
 	@Autowired
@@ -174,7 +176,16 @@ public class DeviceDetailControllerTest {
     	mockMvc.perform(MockMvcRequestBuilders.patch("/devicedetail").contentType(MediaType.APPLICATION_JSON_VALUE)
                 .content(objectMapper.writeValueAsString(createrequest))).andExpect(status().isOk());    	
     }
-    
+
+    @Test
+	@WithMockUser(roles = {"MISP"})
+	public void getLicenseDetailsTest () throws MISPServiceException , Exception{
+//		mockMvc.perform(MockMvcRequestBuilders.get("/misp")).
+//		andExpect(MockMvcResultMatchers.status().isOk());
+		mockMvc.perform(MockMvcRequestBuilders.get("/misp")).
+		andExpect(MockMvcResultMatchers.status().isOk());
+	}
+
     @Test    
     @WithMockUser(roles = {"PARTNER"})
     public void createDeviceDetailTest_regdevice() throws Exception {

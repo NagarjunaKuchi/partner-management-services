@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -21,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -34,19 +36,28 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.mosip.kernel.core.http.RequestWrapper;
 import io.mosip.kernel.core.util.CryptoUtil;
 import io.mosip.pmp.authdevice.dto.DeRegisterDevicePostDto;
 import io.mosip.pmp.authdevice.dto.DeRegisterDeviceReqDto;
 import io.mosip.pmp.authdevice.dto.DeviceData;
 import io.mosip.pmp.authdevice.dto.DeviceDeRegisterResponse;
 import io.mosip.pmp.authdevice.dto.DeviceInfo;
+import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
 import io.mosip.pmp.authdevice.dto.DigitalId;
 import io.mosip.pmp.authdevice.dto.RegisterDeviceResponse;
 import io.mosip.pmp.authdevice.dto.RegisteredDevicePostDto;
 import io.mosip.pmp.authdevice.dto.SignResponseDto;
+import io.mosip.pmp.authdevice.entity.DeviceDetail;
 import io.mosip.pmp.regdevice.entity.RegDeviceDetail;
 import io.mosip.pmp.authdevice.exception.DeviceValidationException;
 import io.mosip.pmp.authdevice.util.HeaderRequest;
+import io.mosip.pmp.common.constant.Purpose;
+import io.mosip.pmp.common.dto.Pagination;
+import io.mosip.pmp.common.dto.SearchFilter;
+import io.mosip.pmp.common.dto.SearchSort;
+import io.mosip.pmp.common.helper.SearchHelper;
+import io.mosip.pmp.common.util.PageUtils;
 import io.mosip.pmp.keycloak.impl.AccessTokenResponse;
 import io.mosip.pmp.partner.PartnerserviceApplication;
 import io.mosip.pmp.partner.core.ResponseWrapper;
@@ -66,6 +77,13 @@ import io.mosip.pmp.regdevice.service.impl.RegRegisteredDeviceServiceImpl;
 @EnableWebMvc
 public class RegRegisteredDeviceServiceTest {
 
+	
+	@Mock
+	SearchHelper searchHelper;
+	
+	@Mock
+	PageUtils pageUtils;
+	
 	@InjectMocks	
     RegRegisteredDeviceService registeredDeviceService=new  RegRegisteredDeviceServiceImpl();
 	
@@ -92,7 +110,7 @@ public class RegRegisteredDeviceServiceTest {
 	ObjectMapper mapper;
 
 	RegDeviceDetail deviceDetail=new RegDeviceDetail();
-	
+	private RequestWrapper<DeviceSearchDto> deviceRequestDto;
 	private RegisteredDevicePostDto registeredDevicePostDto = null;
 	private DigitalId dig;
 	private RegRegisteredDevice registeredDevice;
@@ -101,12 +119,28 @@ public class RegRegisteredDeviceServiceTest {
 	private DeviceInfo deviceInfo;
 	private ResponseWrapper<SignResponseDto> responseWrapper ;
 	private SignResponseDto signResponseDto;
+	DeviceSearchDto deviceSearchDto = new DeviceSearchDto();
+	Pagination pagination = new Pagination();
+	SearchSort searchSort = new SearchSort();
+	SearchFilter searchFilter = new SearchFilter();
 	@SuppressWarnings("unchecked")
 	@Before
 	public void setup() throws Exception {
 		registeredDevice = new RegRegisteredDevice();
 		registeredDevice.setCode("10001");
 		registeredDevice.setStatusCode("Registered");
+		
+		//Search
+				pagination.setPageFetch(10);
+				pagination.setPageStart(0);
+				searchSort.setSortField("model");
+				searchSort.setSortType("asc");
+				searchFilter.setColumnName("model");
+				searchFilter.setFromValue("");
+				searchFilter.setToValue("");
+				searchFilter.setType("STARTSWITH");
+				searchFilter.setValue("b");
+				deviceSearchDto.setPurpose(Purpose.REGISTRATION);
 		
 		registeredDevicePostDto = new RegisteredDevicePostDto();
 		 dig = new DigitalId();
@@ -173,6 +207,15 @@ public class RegRegisteredDeviceServiceTest {
 		
 	}
 		
+	@Test
+	public void regRegisteredDeviceSearchtest() throws Exception{
+		objectMapper.writeValueAsString(deviceRequestDto);
+		DeviceDetail device = new DeviceDetail();
+		device.setId("1001");
+		Mockito.doReturn(new PageImpl<>(Arrays.asList(device))).when(searchHelper).search(Mockito.any(),Mockito.any(),Mockito.any());
+		registeredDeviceService.searchRegisteredDevice(RegRegisteredDevice.class, deviceSearchDto);
+	}
+	
 	@SuppressWarnings("unchecked")
 	@Test(expected=DeviceValidationException.class)
 	public void createRegisteredDevicenegativetimevariant() throws Exception {

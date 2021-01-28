@@ -16,8 +16,10 @@ import io.mosip.pmp.partner.entity.MISPLicenseEntity;
 /**
  * This interface provide necessary methods to manage mosip infra service providers.
  */
+
 @Service
 public interface InfraProviderService {
+
 	
 	/**
 	 * 

@@ -7,11 +7,12 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
@@ -20,6 +21,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
@@ -27,7 +29,19 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.mosip.pmp.common.dto.FilterDto;
+import io.mosip.pmp.common.dto.FilterValueDto;
+import io.mosip.pmp.common.dto.Pagination;
+import io.mosip.pmp.common.dto.SearchDto;
+import io.mosip.pmp.common.dto.SearchFilter;
+import io.mosip.pmp.common.dto.SearchSort;
+import io.mosip.pmp.common.helper.SearchHelper;
+import io.mosip.pmp.common.util.PageUtils;
+
+
 import io.mosip.pmp.common.helper.WebSubPublisher;
+
 import io.mosip.pmp.partner.PartnerserviceApplication;
 import io.mosip.pmp.partner.dto.APIkeyRequests;
 import io.mosip.pmp.partner.dto.DownloadPartnerAPIkeyResponse;
@@ -35,8 +49,12 @@ import io.mosip.pmp.partner.dto.ExtractorDto;
 import io.mosip.pmp.partner.dto.ExtractorProviderDto;
 import io.mosip.pmp.partner.dto.ExtractorsDto;
 import io.mosip.pmp.partner.dto.PartnerAPIKeyRequest;
+import io.mosip.pmp.partner.dto.PartnerCertDownloadRequestDto;
+import io.mosip.pmp.partner.dto.PartnerCertDownloadResponeDto;
+import io.mosip.pmp.partner.dto.PartnerCertificateRequestDto;
 import io.mosip.pmp.partner.dto.PartnerRequest;
 import io.mosip.pmp.partner.dto.PartnerResponse;
+import io.mosip.pmp.partner.dto.PartnerSearchDto;
 import io.mosip.pmp.partner.dto.PartnerUpdateRequest;
 import io.mosip.pmp.partner.dto.RetrievePartnerDetailsResponse;
 import io.mosip.pmp.partner.dto.RetrievePartnerDetailsWithNameResponse;
@@ -66,6 +84,7 @@ import io.mosip.pmp.partner.repository.PartnerServiceRepository;
 import io.mosip.pmp.partner.repository.PartnerTypeRepository;
 import io.mosip.pmp.partner.repository.PolicyGroupRepository;
 import io.mosip.pmp.partner.service.impl.PartnerServiceImpl;
+import io.mosip.pmp.partner.util.RestUtil;
 
 /**
  * @author sanjeev.shrivastava
@@ -80,6 +99,15 @@ public class PartnerServiceImplTest {
 	@Autowired
 	private PartnerServiceImpl pserviceImpl;
 
+	@Autowired
+	private ObjectMapper objectMapper;
+	
+	@Mock
+	RestUtil restUtil;
+	@Mock
+	PageUtils pageUtils;
+	@Mock
+	SearchHelper partnerSearchHelper;
 	@Mock
 	PolicyGroupRepository policyGroupRepository;
 	@Mock
@@ -99,6 +127,15 @@ public class PartnerServiceImplTest {
 	@Mock
 	private WebSubPublisher webSubPublisher;
 	
+	FilterValueDto deviceFilterValueDto = new FilterValueDto();
+	FilterDto filterDto = new FilterDto();
+	SearchFilter searchFilter = new SearchFilter();
+	PartnerSearchDto partnerSearchDto = new PartnerSearchDto();
+	PartnerSearchDto partnerSearchDto1 = new PartnerSearchDto();
+	Pagination pagination = new Pagination();
+	SearchSort searchSort = new SearchSort();
+	SearchDto searchDto = new SearchDto();
+	PartnerCertificateRequestDto partnerCertificateRequestDto = new PartnerCertificateRequestDto();
 	@Before
 	public void setUp() {
 		MockitoAnnotations.initMocks(this);
@@ -110,9 +147,159 @@ public class PartnerServiceImplTest {
 		ReflectionTestUtils.setField(pserviceImpl, "partnerTypeRepository", partnerTypeRepository);
 		ReflectionTestUtils.setField(pserviceImpl, "extractorProviderRepository", extractorProviderRepository);
 		ReflectionTestUtils.setField(pserviceImpl, "partnerCredentialTypePolicyRepo", partnerCredentialTypePolicyRepo);
+
+		ReflectionTestUtils.setField(pserviceImpl, "partnerSearchHelper", partnerSearchHelper);
+		ReflectionTestUtils.setField(pserviceImpl, "pageUtils", pageUtils);
+		ReflectionTestUtils.setField(pserviceImpl, "restUtil", restUtil);
+		
+		//Filter_Test
+		searchFilter.setColumnName("name");
+		searchFilter.setFromValue("");
+		searchFilter.setToValue("");
+		searchFilter.setType("all");
+		searchFilter.setValue("m");
+		List<SearchFilter> searchDtos = new ArrayList<SearchFilter>();
+    	searchDtos.add(searchFilter);
+    	filterDto.setColumnName("name");
+    	filterDto.setText("");
+    	filterDto.setType("all");
+    	List<FilterDto> filterDtos = new ArrayList<FilterDto>();
+    	filterDtos.add(filterDto);
+    	deviceFilterValueDto.setFilters(filterDtos);
+    	deviceFilterValueDto.setOptionalFilters(searchDtos);
+    	//Search_Partner_Test
+    	pagination.setPageFetch(10);
+    	pagination.setPageStart(0);
+    	searchSort.setSortField("name");
+    	searchSort.setSortType("asc");
+    	List<SearchSort> sortDtos = new ArrayList<SearchSort>();
+    	sortDtos.add(searchSort);
+    	partnerSearchDto.setPartnerType("all");
+    	partnerSearchDto.setFilters(searchDtos);
+    	partnerSearchDto.setSort(sortDtos);
+    	partnerSearchDto1.setPartnerType("1234");
+    	partnerSearchDto1.setFilters(searchDtos);
+    	partnerSearchDto1.setSort(sortDtos);
+    	//Search_PartnerType_Test
+    	searchDto.setSort(sortDtos);
+    	searchDto.setFilters(searchDtos);
+    	//certificate
+    	partnerCertificateRequestDto.setCertificateData("1234");
+		partnerCertificateRequestDto.setOrganizationName("airtel");
+		partnerCertificateRequestDto.setPartnerDomain("network");
+		partnerCertificateRequestDto.setPartnerId("id");
+		partnerCertificateRequestDto.setPartnerType("Auth");
+    	
+
+	}
+
+	@Test(expected = PartnerServiceException.class) 
+	public void getPartnerCertificate_Test() throws Exception{
+		Optional<Partner> partner = Optional.of(createPartner(Boolean.TRUE));
+		Optional<PolicyGroup> policyGroup = Optional.of(createPolicyGroup(Boolean.TRUE));
+		Mockito.when(partnerRepository.findById(Mockito.anyString())).thenReturn(partner);
+		Mockito.when(policyGroupRepository.findById(partner.get().getPolicyGroupId())).thenReturn(policyGroup);
+		PartnerCertDownloadRequestDto partnerCertDownloadRequestDto = new PartnerCertDownloadRequestDto();
+		partnerCertDownloadRequestDto.setPartnerId("id");
+		PartnerCertDownloadResponeDto partnerCertDownloadResponeDto = pserviceImpl.getPartnerCertificate(partnerCertDownloadRequestDto);
+		assertNotNull(partnerCertDownloadResponeDto);
+		assertEquals(partnerCertDownloadResponeDto.getCertificateData(), "12345");
+
 		Mockito.doNothing().when(webSubPublisher).notify(Mockito.any(),Mockito.any(),Mockito.any());
+
 	}
 	
+	@Test 
+	public void getPartnerCertificate_Test01() throws Exception{
+		Optional<Partner> partner = Optional.of(createPartner(Boolean.TRUE));
+		Optional<PolicyGroup> policyGroup = Optional.of(createPolicyGroup(Boolean.TRUE));
+		Mockito.when(partnerRepository.findById(Mockito.anyString())).thenReturn(partner);
+		Mockito.when(policyGroupRepository.findById(partner.get().getPolicyGroupId())).thenReturn(policyGroup);
+		PartnerCertDownloadRequestDto partnerCertDownloadRequestDto = new PartnerCertDownloadRequestDto();
+		partnerCertDownloadRequestDto.setPartnerId("id");
+		PartnerCertDownloadResponeDto partnerCertDownloadResponeDto = pserviceImpl.getPartnerCertificate(partnerCertDownloadRequestDto);
+		assertNotNull(partnerCertDownloadResponeDto);
+		assertEquals(partnerCertDownloadResponeDto.getCertificateData(), "12345");
+	}
+	
+//	@Test
+//	public void addContact_test() throws Exception{
+//		AddContactRequestDto addContactRequestDto = new AddContactRequestDto();
+//    	addContactRequestDto.setAddress("Banglore");
+//    	addContactRequestDto.setContactNumber("123456789");
+//    	addContactRequestDto.setEmailId("xyz@gmail.com");
+//    	addContactRequestDto.setIs_Active(true);
+//		Optional<Partner> partner = Optional.of(createPartner(Boolean.TRUE));
+//		Partner par = partner.get();
+//		Mockito.when(partnerRepository.findById(par.getId())).thenReturn(partner);
+//	    pserviceImpl.createAndUpdateContactDetails(addContactRequestDto, par.getId());
+//	}
+	
+	
+	
+	@Test
+	public void searchPartnertest() throws Exception{
+		objectMapper.writeValueAsString(partnerSearchDto);
+		Partner partner = new Partner();
+		partner.setId("id");
+		Mockito.doReturn(new PageImpl<>(Arrays.asList(partner))).when(partnerSearchHelper).search(Mockito.any(),Mockito.any(),Mockito.any());
+		pserviceImpl.searchPartner(partnerSearchDto);
+	}
+	
+	@Test
+	public void searchPartnertest01() throws Exception{
+		objectMapper.writeValueAsString(partnerSearchDto1);
+		Partner partner = new Partner();
+		partner.setId("1001");
+		Mockito.doReturn(new PageImpl<>(Arrays.asList(partner))).when(partnerSearchHelper).search(Mockito.any(),Mockito.any(),Mockito.any());
+		pserviceImpl.searchPartner(partnerSearchDto1);
+	}
+	
+	@Test
+	public void searchPartnerTypetest() throws Exception{
+		objectMapper.writeValueAsString(searchDto);
+		PartnerType partnerType = new PartnerType();
+		partnerType.setCode("1001");
+		Mockito.doReturn(new PageImpl<>(Arrays.asList(partnerType))).when(partnerSearchHelper).search(Mockito.any(),Mockito.any(),Mockito.any());
+		pserviceImpl.searchPartnerType(searchDto);
+	}
+	@Test
+	public void partnerFilterValues_Test() {
+		pserviceImpl.filterValues(deviceFilterValueDto);
+		}
+	
+//	@Test(expected = PartnerDoesNotExistsException.class)
+//	public void uploadPartnerCertificate_Test() throws Exception{
+//		Optional<Partner> partner = Optional.of(createPartner(Boolean.TRUE));
+//		Partner par = partner.get();
+//		Optional<PolicyGroup> policyGroup = Optional.of(createPolicyGroup(Boolean.TRUE));
+//		Mockito.when(policyGroupRepository.findById(par.getPolicyGroupId())).thenReturn(policyGroup);
+//		Mockito.when(partnerRepository.findById(par.getId())).thenReturn(partner);
+//		Mockito.when(partnerTypeRepository.findById("Auth")).thenReturn(Optional.of(getPartnerType()));
+//		pserviceImpl.uploadPartnerCertificate(partnerCertificateRequestDto);
+//	}
+//	
+//	@Test
+//	public void uploadPartnerCertificate_Test01() throws Exception{
+//		Optional<Partner> partner = Optional.of(createPartner(Boolean.TRUE));
+//		Partner par = partner.get();
+//		Optional<PolicyGroup> policyGroup = Optional.of(createPolicyGroup(Boolean.TRUE));
+//		Mockito.when(restUtil.postApi(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
+//				Mockito.any(), Mockito.eq(String.class))).thenReturn("{\"id\":null,\"version\":null,\"responsetime\":\"2021-01-15T11:03:21.741Z\",\"metadata\":null,\"response\":{\"status\":\"Upload Success.\",\"timestamp\":\"2021-01-15T11:03:21.786597\"},\"errors\":null}");
+//
+//		Mockito.when(policyGroupRepository.findById(par.getPolicyGroupId())).thenReturn(policyGroup);
+//		Mockito.when(partnerRepository.findById(par.getId())).thenReturn(partner);
+//		Mockito.when(partnerTypeRepository.findById("Auth")).thenReturn(Optional.of(getPartnerType()));
+//		pserviceImpl.uploadPartnerCertificate(partnerCertificateRequestDto);
+//	}
+	
+//	@Test
+//	public void uploadCACertificate_Test()throws Exception{
+//		CACertificateRequestDto caCertRequestDto = new CACertificateRequestDto();
+//		caCertRequestDto.setCertificateData("1234");
+//		caCertRequestDto.setPartnerDomain("network");
+//		pserviceImpl.uploadCACertificate(caCertRequestDto);
+//	}
 	@Test
 	public void getPartnerDetailsWithName_Test(){
 		RetrievePartnerDetailsWithNameResponse response = new RetrievePartnerDetailsWithNameResponse();
@@ -120,7 +307,6 @@ public class PartnerServiceImplTest {
 		Optional<PolicyGroup> findByIdpolicyGroup = Optional.of(createPolicyGroup(Boolean.TRUE));
 		Partner par = partner.get();
 		PolicyGroup policyGroup = findByIdpolicyGroup.get();
-		
 		response.setId(par.getId());
 		response.setAddress(par.getAddress());
 		response.setContactNo(par.getContactNo());
@@ -181,7 +367,6 @@ public class PartnerServiceImplTest {
 	}
 
 	@Test
-	@Ignore
 	public void savePartnerTest() {
 		PolicyGroup policyGroup = createPolicyGroup(Boolean.FALSE);
 		PartnerRequest partnerRequest = createPartnerRequest();
@@ -808,5 +993,20 @@ public class PartnerServiceImplTest {
 		partnerType.setIsPolicyRequired(true);
 		return partnerType;
 	}
+
+	private String caCertResponse() {
+	 return "{\n"
+	 		+ "\"id\": null,\n"
+	 		+ "\"version\": null,\n"
+	 		+ "\"responsetime\": \"2021-01-15T11:03:21.741Z\",\n"
+	 		+ "\"metadata\": null,\n"
+	 		+ "\"response\": {\n"
+	 		+ "\"status\": \"Upload Success.\",\n"
+	 		+ "\"timestamp\": \"2021-01-15T11:03:21.786597\"\n"
+	 		+ "},\n"
+	 		+ "\"errors\": null\n"
+	 		+ "}"	;
+	}
+	
 
 }

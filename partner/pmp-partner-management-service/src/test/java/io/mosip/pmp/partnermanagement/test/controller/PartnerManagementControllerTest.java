@@ -43,6 +43,8 @@ import io.mosip.pmp.partnermanagement.dto.PartnersPolicyMappingRequest;
 import io.mosip.pmp.partnermanagement.dto.PartnersPolicyMappingResponse;
 import io.mosip.pmp.partnermanagement.dto.RetrievePartnerDetailsResponse;
 import io.mosip.pmp.partnermanagement.dto.RetrievePartnersDetails;
+import io.mosip.pmp.partnermanagement.exception.PartnerAPIKeyDoesNotExistException;
+import io.mosip.pmp.partnermanagement.exception.PartnerValidationException;
 import io.mosip.pmp.partnermanagement.service.PartnerManagementService;
 import io.mosip.pmp.partnermanagement.test.PartnermanagementApplicationTest;
 import io.mosip.pmp.partnermanagement.util.AuditUtil;
@@ -56,7 +58,7 @@ public class PartnerManagementControllerTest {
 	@Autowired
 	private MockMvc mockMvc;
 
-	@Mock
+	@MockBean
 	PartnerManagementService partnerManagementService;
 
 	@Mock
@@ -111,6 +113,7 @@ public class PartnerManagementControllerTest {
 		mockMvc.perform(put("/pmpartners/partnerID/partnerAPIKey").contentType(MediaType.APPLICATION_JSON_VALUE)
 				.content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
 	}
+	
 	
 	@Test
 	@WithMockUser(roles = {"PARTNERMANAGER"})

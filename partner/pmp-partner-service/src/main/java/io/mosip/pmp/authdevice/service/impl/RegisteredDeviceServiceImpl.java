@@ -62,6 +62,7 @@ import io.mosip.pmp.common.dto.PageResponseDto;
 import io.mosip.pmp.common.helper.SearchHelper;
 import io.mosip.pmp.common.util.MapperUtils;
 import io.mosip.pmp.common.util.PageUtils;
+import io.mosip.pmp.common.validator.FilterColumnValidator;
 import io.mosip.pmp.partner.core.RequestWrapper;
 import io.mosip.pmp.partner.core.ValidateResponseWrapper;
 import io.mosip.pmp.partner.exception.ErrorResponse;
@@ -72,6 +73,9 @@ import io.mosip.pmp.regdevice.service.RegRegisteredDeviceService;
 @Transactional
 public class RegisteredDeviceServiceImpl implements RegisteredDeviceService {
 
+	@Autowired
+	FilterColumnValidator filterColumnValidator;
+	
 	@Autowired
 	RegisteredDeviceRepository registeredDeviceRepository;
 
@@ -149,6 +153,7 @@ public class RegisteredDeviceServiceImpl implements RegisteredDeviceService {
 		RegisterDeviceResponse registerDeviceResponse = null;		
 		try {
 			String deviceDataPayLoad = getPayLoad(registeredDevicePostDto.getDeviceData());
+			System.out.println(CryptoUtil.decodeBase64(deviceDataPayLoad));
 			deviceData = mapper.readValue(CryptoUtil.decodeBase64(deviceDataPayLoad), DeviceData.class);
 			validate(deviceData);
 			if (deviceData.getPurpose().equalsIgnoreCase(RegisteredDeviceConstant.REGISTRATION)) {
