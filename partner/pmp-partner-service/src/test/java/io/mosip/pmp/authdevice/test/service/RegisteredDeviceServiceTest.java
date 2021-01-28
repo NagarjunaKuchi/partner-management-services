@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -20,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
@@ -28,14 +30,19 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.mosip.kernel.core.http.RequestWrapper;
 import io.mosip.kernel.core.util.CryptoUtil;
 import io.mosip.kernel.crypto.jce.core.CryptoCore;
+import io.mosip.pmp.common.constant.Purpose;
+import io.mosip.pmp.common.dto.DeviceFilterValueDto;
 import io.mosip.pmp.authdevice.dto.DeRegisterDevicePostDto;
 import io.mosip.pmp.authdevice.dto.DeRegisterDeviceReqDto;
 import io.mosip.pmp.authdevice.dto.DeviceData;
 import io.mosip.pmp.authdevice.dto.DeviceDeRegisterResponse;
 import io.mosip.pmp.authdevice.dto.DeviceInfo;
+import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
 import io.mosip.pmp.authdevice.dto.DigitalId;
+import io.mosip.pmp.authdevice.dto.DigitalIdDto;
 import io.mosip.pmp.authdevice.dto.JWTSignatureResponseDto;
 import io.mosip.pmp.authdevice.dto.RegisterDeviceResponse;
 import io.mosip.pmp.authdevice.dto.RegisteredDevicePostDto;
@@ -51,6 +58,14 @@ import io.mosip.pmp.authdevice.repository.RegisteredDeviceRepository;
 import io.mosip.pmp.authdevice.service.RegisteredDeviceService;
 import io.mosip.pmp.authdevice.service.impl.RegisteredDeviceServiceImpl;
 import io.mosip.pmp.authdevice.util.HeaderRequest;
+import io.mosip.pmp.authdevice.util.RegisteredDeviceConstant;
+import io.mosip.pmp.common.dto.FilterDto;
+import io.mosip.pmp.common.dto.Pagination;
+import io.mosip.pmp.common.dto.SearchFilter;
+import io.mosip.pmp.common.dto.SearchSort;
+import io.mosip.pmp.common.helper.SearchHelper;
+import io.mosip.pmp.common.util.PageUtils;
+import io.mosip.pmp.common.validator.FilterColumnValidator;
 import io.mosip.pmp.keycloak.impl.AccessTokenResponse;
 import io.mosip.pmp.partner.PartnerserviceApplication;
 import io.mosip.pmp.partner.core.ValidateResponseWrapper;
@@ -62,6 +77,16 @@ import io.mosip.pmp.partner.util.RestUtil;
 @EnableWebMvc
 public class RegisteredDeviceServiceTest {
 
+	@Mock
+	SearchHelper searchHelper;
+	
+	@Mock
+	PageUtils pageUtils;
+	
+	
+	@Mock
+	FilterColumnValidator filterColumnValidator;
+	
 	@InjectMocks	
     RegisteredDeviceService registeredDeviceService=new  RegisteredDeviceServiceImpl();
 	
@@ -93,24 +118,62 @@ public class RegisteredDeviceServiceTest {
 	private RestUtil restUtil;
 
 	DeviceDetail deviceDetail=new DeviceDetail();
-	
+	private RequestWrapper<DeviceSearchDto> deviceRequestDto;
 	private RegisteredDevicePostDto registeredDevicePostDto = null;
 	private DigitalId dig;
+	private DigitalId dig1;
 	private RegisteredDevice registeredDevice;
 	private DeviceData device;
 	private RegisteredDeviceHistory registeredDeviceHistory;
 	private DeviceInfo deviceInfo;
 	private ValidateResponseWrapper<JWTSignatureResponseDto> responseWrapper ;
 	private JWTSignatureResponseDto signResponseDto;
-	
+	DeviceFilterValueDto DeviceFilterValueDto=new DeviceFilterValueDto();
+	FilterDto filterDto = new FilterDto();
+	SearchFilter searchDto = new SearchFilter();
+	DeviceSearchDto deviceSearchDto = new DeviceSearchDto();
+	Pagination pagination = new Pagination();
+	SearchSort searchSort = new SearchSort();
+	SearchFilter searchFilter = new SearchFilter();
 	@Before
 	public void setup() throws Exception {
+		ReflectionTestUtils.setField(registeredDeviceService, "filterColumnValidator", filterColumnValidator);
+		ReflectionTestUtils.setField(registeredDeviceService, "searchHelper", searchHelper);
+		ReflectionTestUtils.setField(registeredDeviceService, "pageUtils", pageUtils);
+		//Search
+		pagination.setPageFetch(10);
+		pagination.setPageStart(0);
+		searchSort.setSortField("model");
+		searchSort.setSortType("asc");
+		searchFilter.setColumnName("model");
+		searchFilter.setFromValue("");
+		searchFilter.setToValue("");
+		searchFilter.setType("STARTSWITH");
+		searchFilter.setValue("b");
+		deviceSearchDto.setPurpose(Purpose.REGISTRATION);
+		//Filter
+		filterDto.setColumnName("code");
+    	filterDto.setText("");
+    	filterDto.setType("all");
+    	searchDto.setColumnName("code");
+    	searchDto.setFromValue("");
+    	searchDto.setToValue("");
+    	searchDto.setType("all");
+    	searchDto.setValue("b");
+    	List<FilterDto> filterDtos = new ArrayList<FilterDto>();
+    	filterDtos.add(filterDto);
+    	List<SearchFilter> searchDtos = new ArrayList<SearchFilter>();
+    	searchDtos.add(searchDto);
+    	DeviceFilterValueDto.setFilters(filterDtos);
+    	DeviceFilterValueDto.setOptionalFilters(searchDtos);
+    	//DeviceFilterValueDto.setDeviceProviderId("all");
+    	DeviceFilterValueDto.setPurpose(Purpose.REGISTRATION);
+		
 		registeredDevice = new RegisteredDevice();
 		registeredDevice.setCode("10001");
 		registeredDevice.setStatusCode("Registered");
-		
 		registeredDevicePostDto = new RegisteredDevicePostDto();
-		 dig = new DigitalId();
+		dig = new DigitalId();
 		dig.setDateTime(LocalDateTime.now(ZoneOffset.UTC));
 		dig.setDeviceProvider("SYNCBYTE");
 		dig.setDeviceProviderId("SYNCBYTE.MC01A");
@@ -119,12 +182,14 @@ public class RegisteredDeviceServiceTest {
 		dig.setSerialNo("1801160991");
 		dig.setDeviceSubType("Single");
 		dig.setType("Fingerprint");
+		
 		registeredDevice.setDigitalId(mapper.writeValueAsString(dig));
-		 device = new DeviceData();
+		
+		device = new DeviceData();
 		device.setDeviceId("70959dd5-e45f-438a-9ff8-9b263908e572");
 		device.setFoundationalTrustProviderId("121");
 		device.setPurpose("AUTH");
-		 deviceInfo = new DeviceInfo();
+		deviceInfo = new DeviceInfo();
 		deviceInfo.setCertification("L0");
 		List<String> deviceSubIds = new ArrayList<>();
 		deviceSubIds.add("1");
@@ -134,12 +199,14 @@ public class RegisteredDeviceServiceTest {
 		deviceInfo.setFirmware("firmware");
 		deviceInfo.setDigitalId(CryptoUtil.encodeBase64String(mapper.writeValueAsBytes(dig)));
 		deviceInfo.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+		
 		//device.setDeviceInfo(deviceInfo);
 		registeredDevicePostDto.setDeviceData(CryptoUtil.encodeBase64String(mapper.writeValueAsBytes(device)));
 		
 		deviceDetail.setId("1234");
 		Mockito.doReturn(deviceDetail).when(deviceDetailRepository).findByDeviceDetail(Mockito.anyString(),Mockito.anyString(),Mockito.anyString(),Mockito.anyString(),Mockito.anyString());
 		Mockito.doReturn(registeredDevice).when(registeredDeviceRepository).findByCodeAndIsActiveIsTrue(Mockito.anyString());
+		
 			FoundationalTrustProvider dList=new FoundationalTrustProvider();
 			dList.setId("121");
 			when(ftpRepo.findByIdAndIsActiveTrue(Mockito.anyString()))
@@ -147,6 +214,7 @@ public class RegisteredDeviceServiceTest {
 			when(registeredDeviceRepository.save(Mockito.any())).thenReturn(registeredDevice);
 			when(registeredDeviceHistoryRepo.save(Mockito.any())).thenReturn(registeredDeviceHistory);
 			when(registeredDeviceRepository.findByCodeAndIsActiveIsTrue(Mockito.anyString())).thenReturn(registeredDevice);
+			
 			 signResponseDto = new JWTSignatureResponseDto();
 			signResponseDto.setTimestamp(LocalDateTime.now());
 			signResponseDto.setJwtSignedData("eyJ4NXQjUzI1NiI6InZqa2EzTlBHN2FTUzlETElsbnNxazRYMTZqNE8yTmwtcVR0RXhaQVJWS2siLCJhbGciOiJSUzI1NiJ9.eyJzdGF0dXMiOiJzdWNjZXNzIiwiZGV2aWNlQ29kZSI6ImIwYTIyMDc1LTZhOGYtNDU1NS05NDI4LTM5MGU5MzA4OWY0YyIsImVudiI6IkRldmVsb3BlciIsInRpbWVTdGFtcCI6IjIwMjAtMTAtMDVUMDQ6NDY6MTguMjQyWiJ9.Xuc2XJsh7SRj5PWGCSkHMV426sHL78Eniv6W5z31iIrHNF4XORp0EjjpY1l8FEe95YKAQvBEqK6cLqLnp45_wMyHsjQ5NLZsQXZYzOJpz8OvuM3xFf2xe1tvUrsNhOaOyeDcYtVOO3CawPldMZXT-30r8AxTngV2KEa1comh1qqbfZDLkv1PJP_wh38dpuvrWheVHV6SExoOpauuJ6Df_-9JivwT-WS1e77b0TAoQF7-mRog8azarABSantTKCQAW7rKQd_QYHz0BVvkv4n86qrJvtyqMT6isAFFvEbCAGeodZdLzIKI4eYVx4clTxxgatOD9M4Bz1V6CE35f7pWkQ");
@@ -167,6 +235,20 @@ public class RegisteredDeviceServiceTest {
 		
 	}
 		
+	@Test
+	public void registeredDeviceSearchtest() throws Exception{
+		objectMapper.writeValueAsString(deviceRequestDto);
+		DeviceDetail device = new DeviceDetail();
+		device.setId("1001");
+		Mockito.doReturn(new PageImpl<>(Arrays.asList(device))).when(searchHelper).search(Mockito.any(),Mockito.any(),Mockito.any());
+		registeredDeviceService.searchRegisteredDevice(RegisteredDevice.class, deviceSearchDto);
+	}
+	
+	@Test
+	public void signedregisterdevice() throws Exception{
+		Mockito.when(objectMapper.readValue(any(byte[].class), any(Class.class))).thenReturn(createDevRequest()).thenReturn(getDeviceData(getDeviceInfo(getDitalId())));
+		registeredDeviceService.signedRegisteredDevice(createDevRequest());
+	}
 	@SuppressWarnings("unchecked")
 	@Test(expected=DeviceValidationException.class)
 	public void createRegisteredDevicenegativetimevariant() throws Exception {
@@ -210,6 +292,28 @@ public class RegisteredDeviceServiceTest {
 		Mockito.when(objectMapper.readValue(any(byte[].class), any(Class.class))).thenReturn(device).thenReturn(dig);
 		Mockito.when(objectMapper.writeValueAsString(Mockito.any())).thenReturn(mapper.writeValueAsString(dig)).thenReturn(mapper.writeValueAsString(signResponseDto)).thenReturn(headerString).thenReturn(mapper.writeValueAsString(registerDeviceResponse));
 		Mockito.when(objectMapper.readValue(Mockito.anyString(), any(Class.class))).thenReturn(dig).thenReturn(responseWrapper).thenReturn(signResponseDto);
+		registeredDeviceService.signedRegisteredDevice(registeredDevicePostDto);
+		
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Test(expected=DeviceValidationException.class)
+	public void createRegisteredDeviceInvalidDigitalId() throws Exception {
+		//Mockito.doReturn(null).when(deviceDetailRepository).findByDeviceDetail(Mockito.anyString(),Mockito.anyString(),Mockito.anyString(),Mockito.anyString(),Mockito.anyString());
+		RegisterDeviceResponse registerDeviceResponse = new RegisterDeviceResponse();
+		registerDeviceResponse.setDeviceCode("70959dd5-e45f-438a-9ff8-9b263908e572");
+		registerDeviceResponse.setStatus("Registered");
+		registerDeviceResponse.setTimeStamp(LocalDateTime.now(ZoneOffset.UTC));
+		registerDeviceResponse.setEnv("mz");
+		registerDeviceResponse.setDigitalId(mapper.writeValueAsString(dig1));
+		HeaderRequest header = new HeaderRequest();
+		header.setAlg("RS256");
+		header.setType("JWS");
+		String headerString = mapper.writeValueAsString(header);
+		Mockito.when(objectMapper.writeValueAsBytes(any())).thenReturn(mapper.writeValueAsBytes(registerDeviceResponse));
+		Mockito.when(objectMapper.readValue(any(byte[].class), any(Class.class))).thenReturn(device).thenReturn(dig1);
+		Mockito.when(objectMapper.writeValueAsString(Mockito.any())).thenReturn(mapper.writeValueAsString(dig1)).thenReturn(mapper.writeValueAsString(signResponseDto)).thenReturn(headerString).thenReturn(mapper.writeValueAsString(registerDeviceResponse));
+		Mockito.when(objectMapper.readValue(Mockito.anyString(), any(Class.class))).thenReturn(dig1).thenReturn(responseWrapper).thenReturn(signResponseDto);
 		registeredDeviceService.signedRegisteredDevice(registeredDevicePostDto);
 		
 	}
@@ -591,5 +695,78 @@ public class RegisteredDeviceServiceTest {
 		
 		DeviceDeRegisterResponse dev=mapper.readValue(CryptoUtil.decodeBase64(srd), DeviceDeRegisterResponse.class);
 		assertTrue(dev.getDeviceCode().equals(deviceDeRegisterResponse.getDeviceCode()));
+	}
+	
+	private RegisteredDevicePostDto createDevRequest() throws JsonProcessingException {
+		DigitalId digitalIdDto = new DigitalId();
+		digitalIdDto.setDateTime(LocalDateTime.now(ZoneOffset.UTC));
+		digitalIdDto.setDeviceSubType("Full face");
+		digitalIdDto.setDeviceProvider("MOSIP.PROXY.SBI");
+		digitalIdDto.setDeviceProvider("MOSIP.PROXY.SBI");
+		digitalIdDto.setMake("MOSIP");
+		digitalIdDto.setModel("FACE01");
+		digitalIdDto.setSerialNo("TR001234567");
+		digitalIdDto.setType("Face");
+		DeviceInfo deviceInfo = new DeviceInfo();
+		deviceInfo.setDigitalId(CryptoUtil.encodeBase64(mapper.writeValueAsBytes(digitalIdDto)));
+		deviceInfo.setCertification("L0");
+		deviceInfo.setDeviceExpiry(LocalDateTime.now(ZoneOffset.UTC).plusYears(1));
+		List<String> deviceSubID = new ArrayList<String>();
+		deviceSubID.add("1");
+		deviceSubID.add("2");
+		deviceSubID.add("3");
+		deviceInfo.setDeviceSubId(deviceSubID);
+		deviceInfo.setFirmware("0.9.5");
+		deviceInfo.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+		DeviceData data = new DeviceData();
+		data.setDeviceInfo(CryptoUtil.encodeBase64(mapper.writeValueAsBytes(deviceInfo)));
+		data.setDeviceId("47d53c45-5edb-4607-9c64-35c80483693e");
+		data.setFoundationalTrustProviderId("121");
+		data.setPurpose("Auth");
+		RegisteredDevicePostDto registeredDevicePostDto1 = new RegisteredDevicePostDto();
+		registeredDevicePostDto1.setDeviceData(CryptoUtil.encodeBase64(mapper.writeValueAsBytes(data)));
+		return registeredDevicePostDto1;
+		
+	}
+	
+	
+	private DigitalId getDitalId() {
+		DigitalId digitalIdDto = new DigitalId();
+		digitalIdDto.setDateTime(LocalDateTime.now(ZoneOffset.UTC));
+		digitalIdDto.setDeviceSubType("Full face");
+		digitalIdDto.setDeviceProvider("MOSIP.PROXY.SBI");
+		digitalIdDto.setDeviceProvider("MOSIP.PROXY.SBI");
+		digitalIdDto.setMake("MOSIP");
+		digitalIdDto.setModel("FACE01");
+		digitalIdDto.setSerialNo("TR001234567");
+		digitalIdDto.setType("Face");
+		return digitalIdDto;
+		
+	}
+	
+	private DeviceInfo getDeviceInfo(DigitalId digitalId) throws JsonProcessingException {
+		DeviceInfo deviceInfo = new DeviceInfo();
+		deviceInfo.setDigitalId(CryptoUtil.encodeBase64(mapper.writeValueAsBytes(digitalId)));
+		deviceInfo.setCertification("L0");
+		deviceInfo.setDeviceExpiry(LocalDateTime.now(ZoneOffset.UTC).plusYears(1));
+		List<String> deviceSubID = new ArrayList<String>();
+		deviceSubID.add("1");
+		deviceSubID.add("2");
+		deviceSubID.add("3");
+		deviceInfo.setDeviceSubId(deviceSubID);
+		deviceInfo.setFirmware("0.9.5");
+		deviceInfo.setTimestamp(LocalDateTime.now(ZoneOffset.UTC));
+		DeviceData data = new DeviceData();
+		data.setDeviceInfo(CryptoUtil.encodeBase64(mapper.writeValueAsBytes(deviceInfo)));
+		return deviceInfo;
+	}
+	
+	private DeviceData getDeviceData(DeviceInfo deviceInfo) throws JsonProcessingException {
+		DeviceData data = new DeviceData();
+		data.setDeviceInfo(CryptoUtil.encodeBase64(mapper.writeValueAsBytes(deviceInfo)));
+		data.setDeviceId("47d53c45-5edb-4607-9c64-35c80483693e");
+		data.setFoundationalTrustProviderId("121");
+		data.setPurpose("Auth");
+		return data;
 	}
 }

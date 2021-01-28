@@ -25,6 +25,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -48,6 +49,7 @@ import io.mosip.pmp.common.dto.Pagination;
 import io.mosip.pmp.common.dto.SearchFilter;
 import io.mosip.pmp.common.dto.SearchSort;
 import io.mosip.pmp.common.validator.FilterColumnValidator;
+import io.mosip.pmp.misp.exception.MISPServiceException;
 import io.mosip.pmp.partner.core.RequestWrapper;
 import io.mosip.pmp.partner.core.ResponseWrapper;
 import io.mosip.pmp.partner.test.PartnerserviceApplicationTest;
@@ -397,6 +399,14 @@ public class DeviceDetailControllerTest {
     	RequestWrapper<DeviceSearchDto> request = searchRequest();
     	mockMvc.perform(MockMvcRequestBuilders.post("/devicedetail/deviceType/search").contentType(MediaType.APPLICATION_JSON_VALUE)
                 .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+       }   
+
+    @Test    
+    @WithMockUser(roles = {"PARTNER"})
+    public void createDeviceDetailTest_regdevice() throws Exception {
+    	RequestWrapper<DeviceDetailDto> createrequest=createRequest(true);
+        mockMvc.perform(post("/devicedetail").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(createrequest))).andExpect(status().isOk());
     }
 
     @Test

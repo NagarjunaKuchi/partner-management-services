@@ -1,5 +1,9 @@
 package io.mosip.pmp.authdevice.dto;
 
+
+
+import io.mosip.pmp.common.constant.Purpose;
+
 import io.mosip.pmp.common.dto.SearchDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
