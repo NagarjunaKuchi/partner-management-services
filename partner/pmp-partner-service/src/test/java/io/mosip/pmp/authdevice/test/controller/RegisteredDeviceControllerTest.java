@@ -3,11 +3,12 @@ package io.mosip.pmp.authdevice.test.controller;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -21,49 +22,57 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.mosip.pmp.authdevice.controller.RegisteredDeviceController;
 import io.mosip.pmp.authdevice.dto.DeRegisterDevicePostDto;
+import io.mosip.pmp.authdevice.dto.DeviceSearchDto;
 import io.mosip.pmp.authdevice.dto.RegisteredDevicePostDto;
-import io.mosip.pmp.authdevice.service.RegisteredDeviceService;
+import io.mosip.pmp.authdevice.entity.RegisteredDevice;
+import io.mosip.pmp.authdevice.service.impl.RegisteredDeviceServiceImpl;
+import io.mosip.pmp.common.constant.Purpose;
+import io.mosip.pmp.common.dto.PageResponseDto;
+import io.mosip.pmp.common.dto.Pagination;
+import io.mosip.pmp.common.dto.SearchFilter;
+import io.mosip.pmp.common.dto.SearchSort;
 import io.mosip.pmp.partner.core.RequestWrapper;
 import io.mosip.pmp.partner.core.ResponseWrapper;
 import io.mosip.pmp.partner.test.PartnerserviceApplicationTest;
-import io.mosip.pmp.regdevice.service.RegRegisteredDeviceService;
+import io.mosip.pmp.regdevice.service.impl.RegRegisteredDeviceServiceImpl;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = PartnerserviceApplicationTest.class)
 @AutoConfigureMockMvc
 @EnableWebMvc
-@Ignore
+
 public class RegisteredDeviceControllerTest {
 	@Autowired
     private MockMvc mockMvc;
    
     @Autowired
     private ObjectMapper objectMapper;
-    
-    @InjectMocks
-    RegisteredDeviceController registeredDeviceController;
 	
     @MockBean	
-    RegisteredDeviceService registeredDeviceService;
+    private RegisteredDeviceServiceImpl registeredDeviceService;
 	
     @MockBean	
-    RegRegisteredDeviceService regRegisteredDeviceService;
+    private RegRegisteredDeviceServiceImpl regRegisteredDeviceService;
     
     @Before
     public void setup() throws Exception {
     	String response="";
+    	PageResponseDto<RegisteredDevice> searchResponse = new PageResponseDto<RegisteredDevice>();
     	ResponseWrapper<String> responseWrapper = new ResponseWrapper<>();
+    	ResponseWrapper<PageResponseDto<RegisteredDevice>> searchResponseWrapper = new ResponseWrapper<>(); 
     	responseWrapper.setResponse(response);
+    	searchResponseWrapper.setResponse(searchResponse);
+    	Mockito.when(registeredDeviceService.searchRegisteredDevice(Mockito.any(), Mockito.any())).thenReturn(searchResponse);
         Mockito.when(registeredDeviceService.signedRegisteredDevice(Mockito.any())).thenReturn(response);
         Mockito.when(registeredDeviceService.deRegisterDevice(Mockito.any())).thenReturn(response);
+        Mockito.when(regRegisteredDeviceService.searchRegisteredDevice(Mockito.any(), Mockito.any())).thenReturn(searchResponse);
         Mockito.when(regRegisteredDeviceService.signedRegisteredDevice(Mockito.any())).thenReturn(response);
         Mockito.when(regRegisteredDeviceService.deRegisterDevice(Mockito.any())).thenReturn(response);        
     }
     
     @Test
-    @WithMockUser(roles = {"PARTNER"})
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
     public void signedregisterTest() throws Exception {
     	RequestWrapper<RegisteredDevicePostDto> request=new RequestWrapper<RegisteredDevicePostDto>();
     	RegisteredDevicePostDto registeredDevicePostDto=new RegisteredDevicePostDto();
@@ -74,7 +83,7 @@ public class RegisteredDeviceControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = {"PARTNER"})
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
     public void derigsterTest() throws Exception {
     	RequestWrapper<DeRegisterDevicePostDto> request=new RequestWrapper<DeRegisterDevicePostDto>();
     	DeRegisterDevicePostDto registeredDevicePostDto=new DeRegisterDevicePostDto();
@@ -86,7 +95,37 @@ public class RegisteredDeviceControllerTest {
     }
     
     @Test
-    @WithMockUser(roles = {"PARTNER"})
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
+    public void searchRegisteredDeviceTest() throws Exception {
+    	RequestWrapper<DeviceSearchDto> request=new RequestWrapper<DeviceSearchDto>();
+    	DeviceSearchDto registeredDeviceSearchDto=new DeviceSearchDto();
+    	Pagination pagination = new Pagination();
+    	SearchSort searchSort = new SearchSort();
+    	SearchFilter searchFilter = new SearchFilter();
+    	pagination.setPageFetch(10);
+		pagination.setPageStart(0);
+		searchSort.setSortField("model");
+		searchSort.setSortType("asc");
+		searchFilter.setColumnName("model");
+		searchFilter.setFromValue("");
+		searchFilter.setToValue("");
+		searchFilter.setType("STARTSWITH");
+		searchFilter.setValue("b");
+		List<SearchFilter> searchfilterDtos = new ArrayList<SearchFilter>();
+    	searchfilterDtos.add(searchFilter);
+    	List<SearchSort> searchDtos1 = new ArrayList<SearchSort>();
+    	searchDtos1.add(searchSort);
+    	registeredDeviceSearchDto.setSort(searchDtos1);
+    	registeredDeviceSearchDto.setFilters(searchfilterDtos);
+		registeredDeviceSearchDto.setPagination(pagination);
+    	registeredDeviceSearchDto.setPurpose(Purpose.AUTH);
+    	request.setRequest(registeredDeviceSearchDto);
+    	mockMvc.perform(post("/registereddevices/search").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
     public void signedregisterTest_regDevice() throws Exception {
     	RequestWrapper<RegisteredDevicePostDto> request=new RequestWrapper<RegisteredDevicePostDto>();
     	RegisteredDevicePostDto registeredDevicePostDto=new RegisteredDevicePostDto();
@@ -97,7 +136,7 @@ public class RegisteredDeviceControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = {"PARTNER"})
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
     public void derigsterTest_regDevice() throws Exception {
     	RequestWrapper<DeRegisterDevicePostDto> request=new RequestWrapper<DeRegisterDevicePostDto>();
     	DeRegisterDevicePostDto registeredDevicePostDto=new DeRegisterDevicePostDto();
@@ -105,6 +144,36 @@ public class RegisteredDeviceControllerTest {
     	registeredDevicePostDto.setIsItForRegistrationDevice(true);
     	request.setRequest(registeredDevicePostDto);
     	mockMvc.perform(post("/registereddevices/deregister").contentType(MediaType.APPLICATION_JSON_VALUE)
+                .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
+    }
+    
+    @Test
+    @WithMockUser(roles = {"DEVICE_PROVIDER"})
+    public void searchRegRegisteredDeviceTest() throws Exception {
+    	RequestWrapper<DeviceSearchDto> request=new RequestWrapper<DeviceSearchDto>();
+    	DeviceSearchDto registeredDeviceSearchDto=new DeviceSearchDto();
+    	Pagination pagination = new Pagination();
+    	SearchSort searchSort = new SearchSort();
+    	SearchFilter searchFilter = new SearchFilter();
+    	pagination.setPageFetch(10);
+		pagination.setPageStart(0);
+		searchSort.setSortField("model");
+		searchSort.setSortType("asc");
+		searchFilter.setColumnName("model");
+		searchFilter.setFromValue("");
+		searchFilter.setToValue("");
+		searchFilter.setType("STARTSWITH");
+		searchFilter.setValue("b");
+		List<SearchFilter> searchfilterDtos = new ArrayList<SearchFilter>();
+    	searchfilterDtos.add(searchFilter);
+    	List<SearchSort> searchDtos1 = new ArrayList<SearchSort>();
+    	searchDtos1.add(searchSort);
+    	registeredDeviceSearchDto.setSort(searchDtos1);
+    	registeredDeviceSearchDto.setFilters(searchfilterDtos);
+		registeredDeviceSearchDto.setPagination(pagination);
+    	registeredDeviceSearchDto.setPurpose(Purpose.REGISTRATION);
+    	request.setRequest(registeredDeviceSearchDto);
+    	mockMvc.perform(post("/registereddevices/search").contentType(MediaType.APPLICATION_JSON_VALUE)
                 .content(objectMapper.writeValueAsString(request))).andExpect(status().isOk());
     }
 }
